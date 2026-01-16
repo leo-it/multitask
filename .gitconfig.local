@@ -1,0 +1,13 @@
+# Configuración de Git para este proyecto
+# Este archivo es solo de referencia
+# Ejecuta los comandos manualmente o usa: git config --local ...
+
+# Para configurar el email personal para este proyecto:
+# git config --local user.email "tu-email-personal@ejemplo.com"
+# git config --local user.name "Tu Nombre Personal"
+
+# Para verificar la configuración:
+# git config --local --list
+
+# Para ver solo el email:
+# git config --local user.email

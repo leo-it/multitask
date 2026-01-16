@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  recordatorios Recordatorio[]
+  categorias    Categoria[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Categoria {
+  id          String        @id @default(cuid())
+  nombre      String
+  color       String        @default("#3b82f6")
+  icono       String?
+  userId      String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordatorios Recordatorio[]
+
+  @@index([userId])
+  @@map("categorias")
+}
+
+model Recordatorio {
+  id                String    @id @default(cuid())
+  titulo            String
+  descripcion       String?
+  fechaVencimiento  DateTime
+  categoriaId       String?
+  userId            String
+  completado        Boolean   @default(false)
+  fechaCompletado   DateTime? // Fecha en que se completó la tarea (última vez)
+  vecesCompletado   Int       @default(0) // Contador de veces que se ha completado
+  historialCompletados Json?  // Array de fechas de cuando se completó
+  notificacionesActivas Boolean @default(true)
+  frecuenciaRecordatorio String @default("DIARIO") // DIARIO, SEMANAL, MENSUAL
+  recurrente        Boolean   @default(false) // Si es true, se regenera al completarse
+  frecuenciaRecurrencia String? // SEMANAL, MENSUAL, DIARIO - solo si recurrente es true
+  recordatorioPadreId String? // ID del recordatorio original si es una instancia recurrente
+  ultimaNotificacion DateTime?
+  proximaNotificacion DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoria Categoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([fechaVencimiento])
+  @@index([completado])
+  @@index([proximaNotificacion])
+  @@index([recurrente])
+  @@index([recordatorioPadreId])
+  @@map("recordatorios")
+}
