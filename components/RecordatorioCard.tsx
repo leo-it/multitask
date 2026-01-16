@@ -4,68 +4,70 @@ import { useState, useEffect, useRef } from 'react'
 import { Recordatorio, Categoria } from '@/types'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useI18n } from '@/hooks/useI18n'
 
 interface RecordatorioCardProps {
   recordatorio: Recordatorio
   categorias: Categoria[]
   onUpdate: () => void
+  onEdit?: (recordatorio: Recordatorio) => void
 }
 
-export default function RecordatorioCard({ recordatorio, categorias, onUpdate }: RecordatorioCardProps) {
+export default function RecordatorioCard({ recordatorio, categorias, onUpdate, onEdit }: RecordatorioCardProps) {
+  const t = useI18n('es')
   const [loading, setLoading] = useState(false)
-  const [completadoLocal, setCompletadoLocal] = useState(recordatorio.completado)
+  const [completedLocal, setCompletedLocal] = useState(recordatorio.completado)
+  const [editingHistoryIndex, setEditingHistoryIndex] = useState<number | null>(null)
+  const [editHistoryDate, setEditHistoryDate] = useState('')
   const isUpdatingRef = useRef(false)
-  const lastRecordatorioIdRef = useRef(recordatorio.id)
-  const lastServerCompletadoRef = useRef(recordatorio.completado)
+  const lastReminderIdRef = useRef(recordatorio.id)
+  const lastServerCompletedRef = useRef(recordatorio.completado)
   const categoria = categorias.find((c) => c.id === recordatorio.categoriaId)
 
-  // Sincronizar el estado local cuando cambia el recordatorio del servidor
+  // Sync local state when server reminder changes
   useEffect(() => {
-    // Si es un recordatorio diferente (nuevo ID), siempre sincronizar
-    const isNewRecordatorio = lastRecordatorioIdRef.current !== recordatorio.id
-    if (isNewRecordatorio) {
-      lastRecordatorioIdRef.current = recordatorio.id
-      lastServerCompletadoRef.current = recordatorio.completado
+    const isNewReminder = lastReminderIdRef.current !== recordatorio.id
+    if (isNewReminder) {
+      lastReminderIdRef.current = recordatorio.id
+      lastServerCompletedRef.current = recordatorio.completado
       isUpdatingRef.current = false
-      setCompletadoLocal(recordatorio.completado)
+      setCompletedLocal(recordatorio.completado)
       return
     }
     
-    // Solo sincronizar si:
-    // 1. No estamos actualizando
-    // 2. El estado del servidor es diferente al local
-    // 3. El estado del servidor es diferente al último estado del servidor que vimos
-    // Esto previene bucles infinitos cuando el servidor aún no ha procesado la actualización
-    const serverChanged = lastServerCompletadoRef.current !== recordatorio.completado
-    if (!isUpdatingRef.current && completadoLocal !== recordatorio.completado && serverChanged) {
-      console.log('🔄 Sincronizando estado local con servidor:', {
+    // Only sync if:
+    // 1. Not currently updating
+    // 2. Server state differs from local
+    // 3. Server state differs from last known server state
+    // This prevents infinite loops when server hasn't processed update yet
+    const serverChanged = lastServerCompletedRef.current !== recordatorio.completado
+    if (!isUpdatingRef.current && completedLocal !== recordatorio.completado && serverChanged) {
+      console.log('🔄 Syncing local state with server:', {
         id: recordatorio.id,
-        completadoServidor: recordatorio.completado,
-        completadoLocal: completadoLocal,
-        fechaCompletado: recordatorio.fechaCompletado
+        serverCompleted: recordatorio.completado,
+        localCompleted: completedLocal,
+        completionDate: recordatorio.fechaCompletado
       })
-      lastServerCompletadoRef.current = recordatorio.completado
-      setCompletadoLocal(recordatorio.completado)
+      lastServerCompletedRef.current = recordatorio.completado
+      setCompletedLocal(recordatorio.completado)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordatorio.id, recordatorio.completado])
 
-  const toggleCompletado = async () => {
-    if (loading) return // Prevenir múltiples clics
+  const toggleCompleted = async () => {
+    if (loading) return
     
-    // Si está completado, permitir desmarcar
-    // Si NO está completado, agregar al historial (permitir múltiples veces)
-    const esDesmarcar = completadoLocal
+    const isUnmarking = completedLocal
     
-    console.log('🔄 Frontend:', esDesmarcar ? 'Desmarcando' : 'Agregando completado al historial')
-    console.log('📋 Recordatorio ID:', recordatorio.id)
+    console.log('🔄 Frontend:', isUnmarking ? 'Unmarking' : 'Adding to history')
+    console.log('📋 Reminder ID:', recordatorio.id)
     
     isUpdatingRef.current = true
     setLoading(true)
     
     try {
-      const requestBody = { completado: !esDesmarcar } // true para agregar, false para desmarcar
-      console.log('📤 Frontend: Enviando request:', JSON.stringify(requestBody, null, 2))
+      const requestBody = { completado: !isUnmarking }
+      console.log('📤 Frontend: Sending request:', JSON.stringify(requestBody, null, 2))
       
       const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
         method: 'PATCH',
@@ -77,48 +79,42 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
       console.log('📥 Frontend: Response status:', response.status, response.statusText)
 
       if (response.ok) {
-        const updatedRecordatorio = await response.json()
-        console.log('✅ Frontend: Recordatorio actualizado:', JSON.stringify({
-          id: updatedRecordatorio.id,
-          completado: updatedRecordatorio.completado,
-          vecesCompletado: updatedRecordatorio.vecesCompletado,
+        const updatedReminder = await response.json()
+        console.log('✅ Frontend: Reminder updated:', JSON.stringify({
+          id: updatedReminder.id,
+          completado: updatedReminder.completado,
+          vecesCompletado: updatedReminder.vecesCompletado,
         }, null, 2))
         
-        // Si agregamos al historial, mantener el estado como no completado para permitir otro clic
-        // Si desmarcamos, actualizar el estado
-        if (!esDesmarcar) {
-          // Agregamos al historial, resetear el estado local a false para permitir otro clic
-          setCompletadoLocal(false)
-          lastServerCompletadoRef.current = false
+        if (!isUnmarking) {
+          setCompletedLocal(false)
+          lastServerCompletedRef.current = false
         } else {
-          // Desmarcamos, actualizar el estado
-          setCompletadoLocal(updatedRecordatorio.completado)
-          lastServerCompletadoRef.current = updatedRecordatorio.completado
+          setCompletedLocal(updatedReminder.completado)
+          lastServerCompletedRef.current = updatedReminder.completado
         }
         
-        // Recargar datos para obtener el estado más reciente (historial actualizado)
         setTimeout(() => {
-          console.log('🔄 Recargando datos...')
+          console.log('🔄 Reloading data...')
           onUpdate()
           setTimeout(() => {
             isUpdatingRef.current = false
           }, 200)
         }, 300)
       } else {
-        // Revertir si hay error
         const errorData = await response.json().catch(() => ({}))
-        console.error('❌ Frontend: Error actualizando recordatorio:', errorData)
+        console.error('❌ Frontend: Error updating reminder:', errorData)
         isUpdatingRef.current = false
       }
     } catch (error) {
-      console.error('❌ Frontend: Error en la petición:', error)
+      console.error('❌ Frontend: Request error:', error)
       isUpdatingRef.current = false
     } finally {
       setLoading(false)
     }
   }
 
-  const toggleNotificaciones = async () => {
+  const toggleNotifications = async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
@@ -132,14 +128,14 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
         onUpdate()
       }
     } catch (error) {
-      console.error('Error actualizando notificaciones:', error)
+      console.error('Error updating notifications:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const eliminar = async () => {
-    if (!confirm('¿Estás seguro de eliminar este recordatorio?')) return
+  const deleteReminder = async () => {
+    if (!confirm(t.reminderCard.deleteConfirm)) return
 
     setLoading(true)
     try {
@@ -152,31 +148,51 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
         onUpdate()
       }
     } catch (error) {
-      console.error('Error eliminando recordatorio:', error)
+      console.error('Error deleting reminder:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const fechaVencimiento = new Date(recordatorio.fechaVencimiento)
-  const hoy = new Date()
-  const diasRestantes = Math.ceil((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
-  const estaVencido = diasRestantes < 0 && !completadoLocal
+  const updateHistory = async (newHistory: string[]) => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          historialCompletados: newHistory,
+          vecesCompletado: newHistory.length,
+          fechaCompletado: newHistory.length > 0 ? newHistory[newHistory.length - 1] : null,
+        }),
+      })
+
+      if (response.ok) {
+        onUpdate()
+      }
+    } catch (error) {
+      console.error('Error updating history:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const dueDate = new Date(recordatorio.fechaVencimiento)
+  const today = new Date()
+  const daysRemaining = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const isExpired = daysRemaining < 0 && !completedLocal
   
-  // Obtener fecha de completado si existe
-  const fechaCompletado = recordatorio.fechaCompletado ? new Date(recordatorio.fechaCompletado) : null
+  const completionDate = recordatorio.fechaCompletado ? new Date(recordatorio.fechaCompletado) : null
   
-  // Log del estado actual para debugging (solo cuando cambia algo importante)
   useEffect(() => {
-    // Solo loguear cuando cambia el ID o el estado de completado del servidor
-    const key = `${recordatorio.id}-${recordatorio.completado}`
-    if (lastRecordatorioIdRef.current !== recordatorio.id || 
-        lastServerCompletadoRef.current !== recordatorio.completado) {
-      console.log('📊 Estado del recordatorio:', {
+    if (lastReminderIdRef.current !== recordatorio.id || 
+        lastServerCompletedRef.current !== recordatorio.completado) {
+      console.log('📊 Reminder state:', {
         id: recordatorio.id,
-        completadoServidor: recordatorio.completado,
-        completadoLocal: completadoLocal,
-        fechaCompletado: recordatorio.fechaCompletado,
+        serverCompleted: recordatorio.completado,
+        localCompleted: completedLocal,
+        completionDate: recordatorio.fechaCompletado,
         isUpdating: isUpdatingRef.current
       })
     }
@@ -186,21 +202,21 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
   return (
     <div
       className={`group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 ${
-        completadoLocal
+        completedLocal
           ? 'border-green-300 bg-green-50/70 opacity-100'
-          : estaVencido
+          : isExpired
           ? 'border-red-200 bg-red-50/30'
-          : diasRestantes <= 3
+          : daysRemaining <= 3
           ? 'border-orange-200 bg-orange-50/30'
           : 'border-gray-200'
       }`}
     >
       <div className="p-5">
         <div className="flex items-start gap-4">
-          {/* Botón "Cumplí" / "Por dos" */}
+          {/* Completed button */}
           <div className="flex-shrink-0">
             <button
-              onClick={toggleCompletado}
+              onClick={toggleCompleted}
               disabled={loading}
               className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-primary-500 to-indigo-600 text-white hover:from-primary-600 hover:to-indigo-700"
             >
@@ -213,26 +229,26 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
                   <span>...</span>
                 </span>
               ) : (
-                'Cumplí'
+                t.reminderCard.completed
               )}
             </button>
           </div>
 
-          {/* Contenido principal */}
+          {/* Main content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
                   <h3
                     className={`font-bold text-lg transition-all ${
-                      completadoLocal 
+                      completedLocal 
                         ? 'text-green-700' 
                         : 'text-gray-900'
                     }`}
                   >
                     {recordatorio.titulo}
                   </h3>
-                  {completadoLocal && (
+                  {completedLocal && (
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -241,7 +257,7 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
                 
                 {recordatorio.descripcion && (
                   <p className={`text-sm mb-3 ${
-                    completadoLocal ? 'text-gray-400' : 'text-gray-600'
+                    completedLocal ? 'text-gray-400' : 'text-gray-600'
                   }`}>
                     {recordatorio.descripcion}
                   </p>
@@ -263,48 +279,48 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
                   )}
                   {recordatorio.recurrente && (
                     <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm">
-                      🔄 Recurrente
+                      🔄 {t.reminderCard.recurring}
                     </span>
                   )}
                 </div>
 
-                {/* Fecha y estado */}
+                {/* Date and status */}
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-1.5 text-gray-600">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span className="font-medium">{format(fechaVencimiento, "EEEE d 'de' MMMM, yyyy", { locale: es })}</span>
+                    <span className="font-medium">{format(dueDate, "EEEE d 'de' MMMM, yyyy", { locale: es })}</span>
                   </div>
-                  {!completadoLocal && (
+                  {!completedLocal && (
                     <span
                       className={`px-2.5 py-1 rounded-lg font-semibold text-xs ${
-                        estaVencido
+                        isExpired
                           ? 'bg-red-100 text-red-700'
-                          : diasRestantes === 0
+                          : daysRemaining === 0
                           ? 'bg-orange-100 text-orange-700'
-                          : diasRestantes <= 3
+                          : daysRemaining <= 3
                           ? 'bg-yellow-100 text-yellow-700'
                           : 'bg-blue-100 text-blue-700'
                       }`}
                     >
-                      {estaVencido
-                        ? `⚠️ Vencido hace ${Math.abs(diasRestantes)} días`
-                        : diasRestantes === 0
-                        ? '⏰ Vence hoy'
-                        : diasRestantes === 1
-                        ? '⏰ Vence mañana'
-                        : `${diasRestantes} días restantes`}
+                      {isExpired
+                        ? `⚠️ ${t.reminderCard.expiredDaysAgo} ${Math.abs(daysRemaining)} ${t.reminderCard.days}`
+                        : daysRemaining === 0
+                        ? `⏰ ${t.reminderCard.dueToday}`
+                        : daysRemaining === 1
+                        ? `⏰ ${t.reminderCard.dueTomorrow}`
+                        : `${daysRemaining} ${t.reminderCard.daysRemaining}`}
                     </span>
                   )}
-                  {completadoLocal && fechaCompletado && (
+                  {completedLocal && completionDate && (
                     <span className="px-2.5 py-1 rounded-lg font-semibold text-xs bg-green-100 text-green-700">
-                      ✓ Cumplido el {format(fechaCompletado, "EEEE d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                      ✓ {t.reminderCard.completedOn} {format(completionDate, "EEEE d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
                     </span>
                   )}
                 </div>
                 
-                {/* Mostrar información de completado con contador e historial */}
+                {/* Completion info with counter and history */}
                 {recordatorio.vecesCompletado && recordatorio.vecesCompletado > 0 && (
                   <div className="mt-3 p-3 bg-green-50 rounded-xl border border-green-200">
                     <div className="flex items-start gap-2">
@@ -313,48 +329,107 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
                       </svg>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-green-800">
-                          ✓ Completado {recordatorio.vecesCompletado} {recordatorio.vecesCompletado === 1 ? 'vez' : 'veces'}
+                          ✓ {t.reminderCard.completedTimes} {recordatorio.vecesCompletado} {recordatorio.vecesCompletado === 1 ? t.reminderCard.time : t.reminderCard.times}
                         </p>
-                        {fechaCompletado && (
+                        {completionDate && (
                           <p className="text-xs text-green-600 mt-0.5">
-                            Última vez: {format(fechaCompletado, "EEEE d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                            {t.reminderCard.lastTime} {format(completionDate, "EEEE d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
                           </p>
                         )}
                         {(() => {
-                          // Manejar historial que puede venir como JSON de Prisma o como array
-                          let historial: string[] = []
+                          let history: string[] = []
                           if (recordatorio.historialCompletados) {
                             if (Array.isArray(recordatorio.historialCompletados)) {
-                              historial = recordatorio.historialCompletados
+                              history = recordatorio.historialCompletados
                             } else if (typeof recordatorio.historialCompletados === 'string') {
                               try {
-                                historial = JSON.parse(recordatorio.historialCompletados)
+                                history = JSON.parse(recordatorio.historialCompletados)
                               } catch {
-                                historial = []
+                                history = []
                               }
                             } else if (typeof recordatorio.historialCompletados === 'object') {
-                              // Si es un objeto JSON de Prisma, convertirlo a array
                               try {
-                                historial = Object.values(recordatorio.historialCompletados) as string[]
+                                history = Object.values(recordatorio.historialCompletados) as string[]
                               } catch {
-                                historial = []
+                                history = []
                               }
                             }
                           }
                           
-                          return historial.length > 0 ? (
+                          return history.length > 0 ? (
                             <details className="mt-2">
                               <summary className="text-xs font-medium text-green-700 cursor-pointer hover:text-green-800">
-                                Ver historial ({historial.length} {historial.length === 1 ? 'vez' : 'veces'})
+                                {t.reminderCard.viewHistory} ({history.length} {history.length === 1 ? t.reminderCard.time : t.reminderCard.times})
                               </summary>
                               <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
-                                {[...historial].reverse().map((fecha, index) => {
+                                {[...history].reverse().map((fecha, originalIndex) => {
                                   try {
                                     const fechaObj = new Date(fecha)
+                                    const actualIndex = history.length - 1 - originalIndex
+                                    const isEditing = editingHistoryIndex === originalIndex
+                                    
                                     return (
-                                      <p key={index} className="text-xs text-green-600 pl-2 border-l-2 border-green-200">
-                                        {format(fechaObj, "EEEE d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
-                                      </p>
+                                      <div key={originalIndex} className="flex items-center gap-2 group/item pl-2 border-l-2 border-green-200">
+                                        {isEditing ? (
+                                          <>
+                                            <input
+                                              type="datetime-local"
+                                              value={editHistoryDate}
+                                              onChange={(e) => setEditHistoryDate(e.target.value)}
+                                              className="flex-1 text-xs px-2 py-1 border border-green-300 rounded"
+                                            />
+                                            <button
+                                              onClick={async () => {
+                                                const newHistory = [...history]
+                                                newHistory[actualIndex] = new Date(editHistoryDate).toISOString()
+                                                await updateHistory(newHistory)
+                                                setEditingHistoryIndex(null)
+                                                setEditHistoryDate('')
+                                              }}
+                                              className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                            >
+                                              {t.reminderHistory.save}
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setEditingHistoryIndex(null)
+                                                setEditHistoryDate('')
+                                              }}
+                                              className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                            >
+                                              {t.common.cancel}
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <p className="flex-1 text-xs text-green-600">
+                                              {format(fechaObj, "EEEE d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })}
+                                            </p>
+                                            <button
+                                              onClick={() => {
+                                                setEditingHistoryIndex(originalIndex)
+                                                setEditHistoryDate(new Date(fecha).toISOString().slice(0, 16))
+                                              }}
+                                              className="opacity-0 group-hover/item:opacity-100 text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-all"
+                                              title={t.reminderHistory.edit}
+                                            >
+                                              ✏️
+                                            </button>
+                                            <button
+                                              onClick={async () => {
+                                                if (confirm(t.reminderHistory.deleteConfirm)) {
+                                                  const newHistory = history.filter((_, i) => i !== actualIndex)
+                                                  await updateHistory(newHistory)
+                                                }
+                                              }}
+                                              className="opacity-0 group-hover/item:opacity-100 text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-all"
+                                              title={t.reminderHistory.delete}
+                                            >
+                                              🗑️
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
                                     )
                                   } catch {
                                     return null
@@ -365,41 +440,55 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate }:
                           ) : null
                         })()}
                         <p className="text-xs text-green-600 mt-2">
-                          Vence el {format(fechaVencimiento, "EEEE d 'de' MMMM, yyyy", { locale: es })}
+                          {t.reminderCard.dueOn} {format(dueDate, "EEEE d 'de' MMMM, yyyy", { locale: es })}
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Notificaciones */}
+                {/* Notifications */}
                 <div className="mt-4 pt-3 border-t border-gray-100">
                   <label className="flex items-center gap-2 cursor-pointer group/notif">
                     <input
                       type="checkbox"
                       checked={recordatorio.notificacionesActivas}
-                      onChange={toggleNotificaciones}
+                      onChange={toggleNotifications}
                       disabled={loading}
                       className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500 cursor-pointer"
                     />
                     <span className="text-xs font-medium text-gray-600 group-hover/notif:text-gray-900 transition-colors">
-                      🔔 Notificaciones {recordatorio.notificacionesActivas ? 'activas' : 'desactivadas'}
+                      🔔 {t.reminderCard.notifications} {recordatorio.notificacionesActivas ? t.reminderCard.active : t.reminderCard.inactive}
                     </span>
                   </label>
                 </div>
               </div>
 
-              {/* Botón eliminar */}
-              <button
-                onClick={eliminar}
-                disabled={loading}
-                className="flex-shrink-0 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                title="Eliminar"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+              {/* Action buttons */}
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(recordatorio)}
+                    disabled={loading}
+                    className="flex-shrink-0 p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all duration-200 disabled:opacity-50"
+                    title={t.common.edit}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  onClick={deleteReminder}
+                  disabled={loading}
+                  className="flex-shrink-0 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 disabled:opacity-50"
+                  title={t.common.delete}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>

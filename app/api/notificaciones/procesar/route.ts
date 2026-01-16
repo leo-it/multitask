@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const expectedSecret = process.env.NOTIFICACIONES_SECRET
 
     if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const cantidad = await procesarNotificaciones()
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error procesando notificaciones:', error)
     return NextResponse.json(
-      { error: 'Error al procesar notificaciones' },
+      { error: 'Error processing notifications' },
       { status: 500 }
     )
   }

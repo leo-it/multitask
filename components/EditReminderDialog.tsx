@@ -1,31 +1,48 @@
 'use client'
 
-import { useState } from 'react'
-import { Categoria } from '@/types'
+import { useState, useEffect } from 'react'
+import { Recordatorio, Categoria } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
-interface CrearRecordatorioDialogProps {
+interface EditReminderDialogProps {
+  recordatorio: Recordatorio
   categorias: Categoria[]
   onClose: () => void
   onSuccess: () => void
 }
 
-export default function CrearRecordatorioDialog({
+export default function EditReminderDialog({
+  recordatorio,
   categorias,
   onClose,
   onSuccess,
-}: CrearRecordatorioDialogProps) {
+}: EditReminderDialogProps) {
   const t = useI18n('es')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [categoryId, setCategoryId] = useState<string>('')
-  const [notificationsActive, setNotificationsActive] = useState(true)
-  const [reminderFrequency, setReminderFrequency] = useState('DIARIO')
-  const [recurring, setRecurring] = useState(false)
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState('SEMANAL')
+  const [title, setTitle] = useState(recordatorio.titulo)
+  const [description, setDescription] = useState(recordatorio.descripcion || '')
+  const [dueDate, setDueDate] = useState(
+    recordatorio.fechaVencimiento ? new Date(recordatorio.fechaVencimiento).toISOString().split('T')[0] : ''
+  )
+  const [categoryId, setCategoryId] = useState<string>(recordatorio.categoriaId || '')
+  const [notificationsActive, setNotificationsActive] = useState(recordatorio.notificacionesActivas)
+  const [reminderFrequency, setReminderFrequency] = useState(recordatorio.frecuenciaRecordatorio)
+  const [recurring, setRecurring] = useState(recordatorio.recurrente)
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState(recordatorio.frecuenciaRecurrencia || 'SEMANAL')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    setTitle(recordatorio.titulo)
+    setDescription(recordatorio.descripcion || '')
+    setDueDate(
+      recordatorio.fechaVencimiento ? new Date(recordatorio.fechaVencimiento).toISOString().split('T')[0] : ''
+    )
+    setCategoryId(recordatorio.categoriaId || '')
+    setNotificationsActive(recordatorio.notificacionesActivas)
+    setReminderFrequency(recordatorio.frecuenciaRecordatorio)
+    setRecurring(recordatorio.recurrente)
+    setRecurrenceFrequency(recordatorio.frecuenciaRecurrencia || 'SEMANAL')
+  }, [recordatorio])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,8 +60,8 @@ export default function CrearRecordatorioDialog({
 
     setLoading(true)
     try {
-      const response = await fetch('/api/recordatorios', {
-        method: 'POST',
+      const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
@@ -54,21 +71,19 @@ export default function CrearRecordatorioDialog({
           categoriaId: categoryId || null,
           notificacionesActivas: notificationsActive,
           frecuenciaRecordatorio: reminderFrequency,
-          recurrente: recurring,
-          frecuenciaRecurrencia: recurring ? recurrenceFrequency : null,
         }),
       })
 
       if (!response.ok) {
         const data = await response.json()
-        setError(data.error || t.createReminder.createError)
+        setError(data.error || t.editReminder.updateError)
         return
       }
 
       onSuccess()
       onClose()
     } catch (error) {
-      setError(t.createReminder.createError)
+      setError(t.editReminder.updateError)
     } finally {
       setLoading(false)
     }
@@ -81,9 +96,9 @@ export default function CrearRecordatorioDialog({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                {t.createReminder.title}
+                {t.editReminder.title}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">{t.createReminder.subtitle}</p>
+              <p className="text-sm text-gray-500 mt-1">{t.editReminder.subtitle}</p>
             </div>
             <button
               onClick={onClose}
@@ -184,54 +199,15 @@ export default function CrearRecordatorioDialog({
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="notificaciones"
+                  id="notificaciones-edit"
                   checked={notificationsActive}
                   onChange={(e) => setNotificationsActive(e.target.checked)}
                   className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
                 />
-                <label htmlFor="notificaciones" className="text-sm text-gray-700">
+                <label htmlFor="notificaciones-edit" className="text-sm text-gray-700">
                   {t.createReminder.enableNotifications}
                 </label>
               </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="recurrente"
-                  checked={recurring}
-                  onChange={(e) => setRecurring(e.target.checked)}
-                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                />
-                <label htmlFor="recurrente" className="text-sm text-gray-700">
-                  {t.createReminder.recurringLabel}
-                </label>
-              </div>
-
-              {recurring && (
-                <div className="ml-6 space-y-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t.createReminder.recurrenceFrequencyLabel}
-                    </label>
-                    <select
-                      value={recurrenceFrequency}
-                      onChange={(e) => setRecurrenceFrequency(e.target.value)}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                    >
-                      <option value="DIARIO">{t.createReminder.recurrenceDaily}</option>
-                      <option value="SEMANAL">{t.createReminder.recurrenceWeekly}</option>
-                      <option value="MENSUAL">{t.createReminder.recurrenceMonthly}</option>
-                    </select>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    ✅ {t.createReminder.recurrenceInfo}
-                    {recurrenceFrequency === 'SEMANAL' && t.createReminder.recurrenceWeeklyInfo}
-                    {recurrenceFrequency === 'MENSUAL' && t.createReminder.recurrenceMonthlyInfo}
-                    {recurrenceFrequency === 'DIARIO' && t.createReminder.recurrenceDailyInfo}
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -253,9 +229,9 @@ export default function CrearRecordatorioDialog({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    {t.createReminder.creating}
+                    {t.editReminder.updating}
                   </span>
-                ) : t.createReminder.createButton}
+                ) : t.editReminder.updateButton}
               </button>
             </div>
           </form>

@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useI18n } from '@/hooks/useI18n'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const t = useI18n('es')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,13 +29,13 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Error al registrar')
+        setError(data.error || t.register.registerError)
         return
       }
 
       router.push('/login?registered=true')
     } catch (err) {
-      setError('Error al registrar')
+      setError(t.register.registerError)
     } finally {
       setLoading(false)
     }
@@ -47,9 +49,9 @@ export default function RegisterPage() {
             <span className="text-white text-3xl font-bold">✓</span>
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
-            Crear cuenta
+            {t.register.title}
           </h1>
-          <p className="text-gray-600 font-medium">Regístrate para comenzar</p>
+          <p className="text-gray-600 font-medium">{t.register.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -64,7 +66,7 @@ export default function RegisterPage() {
 
           <div>
             <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-              Nombre
+              {t.register.nameLabel}
             </label>
             <input
               id="name"
@@ -73,13 +75,13 @@ export default function RegisterPage() {
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm"
-              placeholder="Tu nombre"
+              placeholder={t.register.namePlaceholder}
             />
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-              Email
+              {t.register.emailLabel}
             </label>
             <input
               id="email"
@@ -88,13 +90,13 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm"
-              placeholder="tu@email.com"
+              placeholder={t.register.emailPlaceholder}
             />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-              Contraseña
+              {t.register.passwordLabel}
             </label>
             <input
               id="password"
@@ -104,7 +106,7 @@ export default function RegisterPage() {
               required
               minLength={6}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm"
-              placeholder="Mínimo 6 caracteres"
+              placeholder={t.register.passwordPlaceholder}
             />
           </div>
 
@@ -119,17 +121,17 @@ export default function RegisterPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Creando cuenta...
+                {t.register.creating}
               </span>
-            ) : 'Crear cuenta'}
+            ) : t.register.registerButton}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            ¿Ya tienes cuenta?{' '}
+            {t.register.hasAccount}{' '}
             <Link href="/login" className="text-primary-600 hover:text-primary-700 font-semibold underline decoration-2 underline-offset-2 transition-colors">
-              Inicia sesión
+              {t.register.loginLink}
             </Link>
           </p>
         </div>

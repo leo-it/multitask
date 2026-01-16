@@ -14,7 +14,7 @@ export async function GET() {
     const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const categorias = await prisma.categoria.findMany({
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const session = await getServerSession()
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
     console.error('Error creando categoría:', error)
     return NextResponse.json(
-      { error: 'Error al crear categoría' },
+      { error: 'Error creating category' },
       { status: 500 }
     )
   }

@@ -98,7 +98,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error obteniendo recordatorios:', error)
     return NextResponse.json(
-      { error: 'Error al obtener recordatorios' },
+      { error: 'Error fetching reminders' },
       { status: 500 }
     )
   }
@@ -220,7 +220,7 @@ export async function POST(request: Request) {
 
     console.error('Error creando recordatorio:', error)
     return NextResponse.json(
-      { error: 'Error al crear recordatorio' },
+      { error: 'Error creating reminder' },
       { status: 500 }
     )
   }

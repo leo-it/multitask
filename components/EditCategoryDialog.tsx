@@ -1,33 +1,41 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Categoria } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
-interface CrearCategoriaDialogProps {
+interface EditCategoryDialogProps {
+  categoria: Categoria
   onClose: () => void
   onSuccess: () => void
 }
 
 const colores = [
-  '#3b82f6', // azul
-  '#ef4444', // rojo
-  '#10b981', // verde
-  '#f59e0b', // amarillo
-  '#8b5cf6', // morado
-  '#ec4899', // rosa
-  '#06b6d4', // cyan
-  '#f97316', // naranja
+  '#3b82f6',
+  '#ef4444',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#06b6d4',
+  '#f97316',
 ]
 
 const iconos = ['💳', '🏋️', '🏠', '🚗', '📱', '💊', '🎓', '🍔', '✈️', '🎁']
 
-export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCategoriaDialogProps) {
+export default function EditCategoryDialog({ categoria, onClose, onSuccess }: EditCategoryDialogProps) {
   const t = useI18n('es')
-  const [nombre, setNombre] = useState('')
-  const [color, setColor] = useState(colores[0])
-  const [icono, setIcono] = useState(iconos[0])
+  const [nombre, setNombre] = useState(categoria.nombre)
+  const [color, setColor] = useState(categoria.color)
+  const [icono, setIcono] = useState(categoria.icono || iconos[0])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    setNombre(categoria.nombre)
+    setColor(categoria.color)
+    setIcono(categoria.icono || iconos[0])
+  }, [categoria])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,8 +48,8 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
 
     setLoading(true)
     try {
-      const response = await fetch('/api/categorias', {
-        method: 'POST',
+      const response = await fetch(`/api/categorias/${categoria.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
@@ -53,14 +61,14 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
 
       if (!response.ok) {
         const data = await response.json()
-        setError(data.error || t.createCategory.createError)
+        setError(data.error || t.editCategory.updateError)
         return
       }
 
       onSuccess()
       onClose()
     } catch (error) {
-      setError(t.createCategory.createError)
+      setError(t.editCategory.updateError)
     } finally {
       setLoading(false)
     }
@@ -73,9 +81,9 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                {t.createCategory.title}
+                {t.editCategory.title}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">{t.createCategory.subtitle}</p>
+              <p className="text-sm text-gray-500 mt-1">{t.editCategory.subtitle}</p>
             </div>
             <button
               onClick={onClose}
@@ -174,9 +182,9 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    {t.createCategory.creating}
+                    {t.editCategory.updating}
                   </span>
-                ) : t.createCategory.createButton}
+                ) : t.editCategory.updateButton}
               </button>
             </div>
           </form>
