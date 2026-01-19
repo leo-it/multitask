@@ -24,7 +24,7 @@ const recordatorioSchema = z.object({
   return true
 }, {
   message: "Los recordatorios recurrentes necesitan frecuencia, los no recurrentes necesitan fecha de vencimiento",
-  path: data => data.recurrente ? ['frecuenciaRecurrencia'] : ['fechaVencimiento']
+  path: ['fechaVencimiento']
 })
 
 export async function GET() {
@@ -40,19 +40,26 @@ export async function GET() {
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
     
-    await prisma.recordatorio.updateMany({
+    // Reset expired completed reminders
+    const expiredReminders = await prisma.recordatorio.findMany({
       where: {
         userId: session.user.id,
         completado: true,
         fechaVencimiento: {
           lt: hoy
         }
-      },
-      data: {
-        completado: false,
-        fechaCompletado: null
       }
     })
+
+    for (const reminder of expiredReminders) {
+      await prisma.recordatorio.update({
+        where: { id: reminder.id },
+        data: {
+          completado: false,
+          fechaCompletado: null,
+        } as any
+      })
+    }
 
     const recordatorios = await prisma.recordatorio.findMany({
       where: { userId: session.user.id },
@@ -63,40 +70,62 @@ export async function GET() {
       ],
     })
 
-    // Filtrar para mostrar solo un recordatorio único por título si es recurrente
-    // Priorizar el que no tiene recordatorioPadreId (el original)
+    // Filter to show only one reminder per title if recurring
+    // Prioritize the one without recordatorioPadreId (the original)
     const recordatoriosUnicos = recordatorios.reduce((acc, recordatorio) => {
-      if (recordatorio.recurrente) {
-        // Si es recurrente, buscar si ya existe uno con el mismo título
+      const reminder = recordatorio as typeof recordatorio & { vecesCompletado?: number }
+      
+      if (reminder.recurrente) {
+        // If recurring, check if one with same title already exists
         const existente = acc.find(
-          (r) => r.titulo === recordatorio.titulo && r.recurrente
-        )
+          (r) => r.titulo === reminder.titulo && r.recurrente
+        ) as typeof reminder | undefined
         
         if (!existente) {
-          // Si no existe, agregarlo
-          acc.push(recordatorio)
+          acc.push(reminder)
         } else {
-          // Si existe, mantener el que no tiene recordatorioPadreId (el original)
-          // o el que tiene más veces completado
+          const existenteWithHistory = existente as typeof reminder
+          // Keep the one without recordatorioPadreId (the original)
+          // or the one with more completions
           if (
-            !recordatorio.recordatorioPadreId ||
-            (recordatorio.vecesCompletado || 0) > (existente.vecesCompletado || 0)
+            !reminder.recordatorioPadreId ||
+            (reminder.vecesCompletado || 0) > (existenteWithHistory.vecesCompletado || 0)
           ) {
             const index = acc.indexOf(existente)
-            acc[index] = recordatorio
+            acc[index] = reminder
           }
         }
       } else {
-        // Si no es recurrente, agregarlo normalmente
-        acc.push(recordatorio)
+        // If not recurring, add normally
+        acc.push(reminder)
       }
       
       return acc
-    }, [] as typeof recordatorios)
+    }, [] as (typeof recordatorios[0] & { vecesCompletado?: number })[])
 
-    return NextResponse.json(recordatoriosUnicos)
+    // Sort again after filtering to ensure completed tasks go to the end
+    const recordatoriosOrdenados = recordatoriosUnicos.sort((a, b) => {
+      const reminderA = a as typeof a & { vecesCompletado?: number }
+      const reminderB = b as typeof b & { vecesCompletado?: number }
+      
+      // Check if task has completion history (even if completado is false)
+      const aHasHistory = reminderA.vecesCompletado && reminderA.vecesCompletado > 0
+      const bHasHistory = reminderB.vecesCompletado && reminderB.vecesCompletado > 0
+      
+      // Consider a task "completed" if completado is true OR has history
+      const aIsCompleted = a.completado === true || aHasHistory
+      const bIsCompleted = b.completado === true || bHasHistory
+      
+      // Non-completed tasks first
+      if (aIsCompleted !== bIsCompleted) {
+        return aIsCompleted === true ? 1 : -1
+      }
+      // Within same completion status, sort by due date
+      return a.fechaVencimiento.getTime() - b.fechaVencimiento.getTime()
+    })
+
+    return NextResponse.json(recordatoriosOrdenados)
   } catch (error) {
-    console.error('Error obteniendo recordatorios:', error)
     return NextResponse.json(
       { error: 'Error fetching reminders' },
       { status: 500 }
@@ -218,7 +247,6 @@ export async function POST(request: Request) {
       )
     }
 
-    console.error('Error creando recordatorio:', error)
     return NextResponse.json(
       { error: 'Error creating reminder' },
       { status: 500 }

@@ -65,10 +65,6 @@ export async function procesarNotificaciones() {
       },
     })
 
-    // Aquí se enviaría la notificación real
-    // Por ahora, solo registramos en consola
-    console.log(`Notificación enviada para: ${recordatorio.titulo}`)
-    
     // TODO: Implementar Web Push API o servicio de notificaciones
     // await enviarNotificacionPush(recordatorio.user, recordatorio)
   }

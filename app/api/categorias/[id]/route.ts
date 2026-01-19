@@ -45,7 +45,6 @@ export async function PATCH(
       )
     }
 
-    console.error('Error updating category:', error)
     return NextResponse.json(
       { error: 'Error updating category' },
       { status: 500 }
@@ -78,7 +77,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Category deleted' })
   } catch (error) {
-    console.error('Error deleting category:', error)
     return NextResponse.json(
       { error: 'Error deleting category' },
       { status: 500 }

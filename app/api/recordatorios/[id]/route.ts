@@ -42,9 +42,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    console.log('📥 Body recibido:', JSON.stringify(body, null, 2))
     const data = updateSchema.parse(body)
-    console.log('✅ Data parseada:', JSON.stringify(data, null, 2))
 
     const updateData: any = { ...data }
 
@@ -100,29 +98,13 @@ export async function PATCH(
       // Actualizar campos del historial - Prisma acepta objetos JavaScript para campos JSON
       updateData.historialCompletados = nuevoHistorial
       updateData.vecesCompletado = (reminder.vecesCompletado || 0) + 1
-      updateData.fechaCompletado = fechaCompletado // Última fecha de completado
-      // NO cambiar completado a true permanentemente, solo actualizar la fecha
+      updateData.fechaCompletado = fechaCompletado
       delete updateData.completado
-      
-      console.log('✅ Agregando completado al historial, fechaCompletado:', fechaCompletado.toISOString())
-      console.log('📊 Nuevo historial:', nuevoHistorial)
     } else if (data.completado !== undefined && data.completado === false) {
       // Solo permitir desmarcar si está marcado actualmente
       updateData.fechaCompletado = null
       updateData.completado = false
-      // NO eliminar el historial ni el contador
-      console.log('❌ Desmarcando estado actual (manteniendo historial)')
     }
-    
-    console.log('📤 UpdateData antes de actualizar:', {
-      ...updateData,
-      fechaCompletado: updateData.fechaCompletado instanceof Date 
-        ? updateData.fechaCompletado.toISOString() 
-        : updateData.fechaCompletado,
-      fechaVencimiento: updateData.fechaVencimiento instanceof Date
-        ? updateData.fechaVencimiento.toISOString()
-        : updateData.fechaVencimiento
-    })
 
     // Recalcular próxima notificación si cambian las notificaciones o frecuencia
     if (data.notificacionesActivas !== undefined || data.frecuenciaRecordatorio) {
@@ -149,15 +131,6 @@ export async function PATCH(
         updateData.proximaNotificacion = null
       }
     }
-
-    console.log('🔄 Actualizando recordatorio con ID:', params.id)
-    console.log('📦 Datos a actualizar (tipos):', {
-      completado: typeof updateData.completado,
-      fechaCompletado: updateData.fechaCompletado instanceof Date ? 'Date' : typeof updateData.fechaCompletado,
-      fechaVencimiento: updateData.fechaVencimiento instanceof Date ? 'Date' : typeof updateData.fechaVencimiento,
-      historialCompletados: typeof updateData.historialCompletados,
-      vecesCompletado: typeof updateData.vecesCompletado
-    })
     
     // Build update object explicitly for Prisma
     const prismaUpdateData: any = {}
@@ -186,12 +159,6 @@ export async function PATCH(
       historialCompletados?: string[] | object | null
       vecesCompletado?: number
     }
-    
-    console.log('✅ Recordatorio actualizado:', JSON.stringify({
-      id: updatedReminder.id,
-      completado: updatedReminder.completado,
-      fechaCompletado: updatedReminder.fechaCompletado,
-    }, null, 2))
 
     // NO crear el siguiente recordatorio recurrente inmediatamente
     // El recordatorio permanecerá completado hasta su fecha de vencimiento
@@ -200,17 +167,10 @@ export async function PATCH(
     return NextResponse.json(updated)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('❌ Zod validation error:', error.errors)
       return NextResponse.json(
         { error: 'Invalid data', details: error.errors },
         { status: 400 }
       )
-    }
-
-    console.error('❌ Error updating reminder:', error)
-    if (error instanceof Error) {
-      console.error('❌ Error message:', error.message)
-      console.error('❌ Stack trace:', error.stack)
     }
     
     return NextResponse.json(
@@ -249,7 +209,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Reminder deleted' })
   } catch (error) {
-    console.error('Error deleting reminder:', error)
     return NextResponse.json(
       { error: 'Error deleting reminder' },
       { status: 500 }

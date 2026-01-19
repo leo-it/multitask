@@ -1,0 +1,13 @@
+# Cursor Rules
+
+## Code Style
+- Do not add comments to code unless explicitly requested by the user
+- Do not add console.log statements unless explicitly requested by the user
+- Write code in English (variables, functions, classes, etc.)
+- UI texts should use i18n system (default Spanish)
+- Keep code clean and self-documenting
+
+## General Guidelines
+- Prefer explicit code over comments
+- Remove debug statements before committing
+- Focus on clear, readable code structure

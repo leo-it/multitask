@@ -30,7 +30,6 @@ export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected
         onUpdate()
       }
     } catch (error) {
-      console.error('Error eliminando categoría:', error)
     } finally {
       setLoading(false)
     }

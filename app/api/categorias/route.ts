@@ -24,7 +24,6 @@ export async function GET() {
 
     return NextResponse.json(categorias)
   } catch (error) {
-    console.error('Error obteniendo categorías:', error)
     return NextResponse.json(
       { error: 'Error al obtener categorías' },
       { status: 500 }
@@ -59,7 +58,6 @@ export async function POST(request: Request) {
       )
     }
 
-    console.error('Error creando categoría:', error)
     return NextResponse.json(
       { error: 'Error creating category' },
       { status: 500 }

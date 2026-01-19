@@ -42,12 +42,6 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
     // This prevents infinite loops when server hasn't processed update yet
     const serverChanged = lastServerCompletedRef.current !== recordatorio.completado
     if (!isUpdatingRef.current && completedLocal !== recordatorio.completado && serverChanged) {
-      console.log('🔄 Syncing local state with server:', {
-        id: recordatorio.id,
-        serverCompleted: recordatorio.completado,
-        localCompleted: completedLocal,
-        completionDate: recordatorio.fechaCompletado
-      })
       lastServerCompletedRef.current = recordatorio.completado
       setCompletedLocal(recordatorio.completado)
     }
@@ -59,15 +53,11 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
     
     const isUnmarking = completedLocal
     
-    console.log('🔄 Frontend:', isUnmarking ? 'Unmarking' : 'Adding to history')
-    console.log('📋 Reminder ID:', recordatorio.id)
-    
     isUpdatingRef.current = true
     setLoading(true)
     
     try {
       const requestBody = { completado: !isUnmarking }
-      console.log('📤 Frontend: Sending request:', JSON.stringify(requestBody, null, 2))
       
       const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
         method: 'PATCH',
@@ -76,15 +66,8 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
         body: JSON.stringify(requestBody),
       })
 
-      console.log('📥 Frontend: Response status:', response.status, response.statusText)
-
       if (response.ok) {
         const updatedReminder = await response.json()
-        console.log('✅ Frontend: Reminder updated:', JSON.stringify({
-          id: updatedReminder.id,
-          completado: updatedReminder.completado,
-          vecesCompletado: updatedReminder.vecesCompletado,
-        }, null, 2))
         
         if (!isUnmarking) {
           setCompletedLocal(false)
@@ -95,7 +78,6 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
         }
         
         setTimeout(() => {
-          console.log('🔄 Reloading data...')
           onUpdate()
           setTimeout(() => {
             isUpdatingRef.current = false
@@ -103,11 +85,9 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
         }, 300)
       } else {
         const errorData = await response.json().catch(() => ({}))
-        console.error('❌ Frontend: Error updating reminder:', errorData)
         isUpdatingRef.current = false
       }
     } catch (error) {
-      console.error('❌ Frontend: Request error:', error)
       isUpdatingRef.current = false
     } finally {
       setLoading(false)
@@ -128,7 +108,6 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
         onUpdate()
       }
     } catch (error) {
-      console.error('Error updating notifications:', error)
     } finally {
       setLoading(false)
     }
@@ -148,7 +127,6 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
         onUpdate()
       }
     } catch (error) {
-      console.error('Error deleting reminder:', error)
     } finally {
       setLoading(false)
     }
@@ -172,7 +150,6 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
         onUpdate()
       }
     } catch (error) {
-      console.error('Error updating history:', error)
     } finally {
       setLoading(false)
     }
@@ -186,16 +163,6 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
   const completionDate = recordatorio.fechaCompletado ? new Date(recordatorio.fechaCompletado) : null
   
   useEffect(() => {
-    if (lastReminderIdRef.current !== recordatorio.id || 
-        lastServerCompletedRef.current !== recordatorio.completado) {
-      console.log('📊 Reminder state:', {
-        id: recordatorio.id,
-        serverCompleted: recordatorio.completado,
-        localCompleted: completedLocal,
-        completionDate: recordatorio.fechaCompletado,
-        isUpdating: isUpdatingRef.current
-      })
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordatorio.id, recordatorio.completado])
 

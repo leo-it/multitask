@@ -37,7 +37,6 @@ export default function DashboardClient() {
       ])
 
       if (!remindersRes.ok) {
-        console.error('Error fetching reminders:', remindersRes.status)
         setReminders([])
       } else {
         const remindersData = await remindersRes.json()
@@ -45,14 +44,12 @@ export default function DashboardClient() {
       }
 
       if (!categoriesRes.ok) {
-        console.error('Error fetching categories:', categoriesRes.status)
         setCategories([])
       } else {
         const categoriesData = await categoriesRes.json()
         setCategories(Array.isArray(categoriesData) ? categoriesData : [])
       }
     } catch (error) {
-      console.error('Error loading data:', error)
       setReminders([])
       setCategories([])
     } finally {
@@ -62,21 +59,38 @@ export default function DashboardClient() {
 
   const remindersArray = Array.isArray(reminders) ? reminders : []
 
-  const filteredReminders = remindersArray.filter((r) => {
-    if (categoryFilter && r.categoriaId !== categoryFilter) return false
-    
-    if (completionFilter === 'pendientes') {
-      if (!r.completado) return true
-      const dueDate = new Date(r.fechaVencimiento)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      dueDate.setHours(0, 0, 0, 0)
-      return dueDate >= today
-    }
-    
-    if (completionFilter === 'completados' && !r.completado) return false
-    return true
-  })
+  const filteredReminders = remindersArray
+    .filter((r) => {
+      if (categoryFilter && r.categoriaId !== categoryFilter) return false
+      
+      if (completionFilter === 'pendientes') {
+        if (!r.completado) return true
+        const dueDate = new Date(r.fechaVencimiento)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        dueDate.setHours(0, 0, 0, 0)
+        return dueDate >= today
+      }
+      
+      if (completionFilter === 'completados' && !r.completado) return false
+      return true
+    })
+    .sort((a, b) => {
+      // Check if task has completion history (even if completado is false)
+      const aHasHistory = a.vecesCompletado && a.vecesCompletado > 0
+      const bHasHistory = b.vecesCompletado && b.vecesCompletado > 0
+      
+      // Consider a task "completed" if completado is true OR has history
+      const aIsCompleted = a.completado === true || aHasHistory
+      const bIsCompleted = b.completado === true || bHasHistory
+      
+      // Non-completed tasks first
+      if (aIsCompleted !== bIsCompleted) {
+        return aIsCompleted === true ? 1 : -1
+      }
+      // Within same completion status, sort by due date (earliest first)
+      return new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()
+    })
 
   const pendingReminders = remindersArray.filter((r) => !r.completado)
   const upcomingDueDates = pendingReminders
