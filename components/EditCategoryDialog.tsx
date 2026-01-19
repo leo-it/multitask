@@ -1,16 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Categoria } from '@/types'
+import { Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
 interface EditCategoryDialogProps {
-  categoria: Categoria
+  category: Category
   onClose: () => void
   onSuccess: () => void
 }
 
-const colores = [
+const colors = [
   '#3b82f6',
   '#ef4444',
   '#10b981',
@@ -21,41 +21,41 @@ const colores = [
   '#f97316',
 ]
 
-const iconos = ['💳', '🏋️', '🏠', '🚗', '📱', '💊', '🎓', '🍔', '✈️', '🎁']
+const icons = ['💳', '🏋️', '🏠', '🚗', '📱', '💊', '🎓', '🍔', '✈️', '🎁']
 
-export default function EditCategoryDialog({ categoria, onClose, onSuccess }: EditCategoryDialogProps) {
+export default function EditCategoryDialog({ category, onClose, onSuccess }: EditCategoryDialogProps) {
   const t = useI18n('es')
-  const [nombre, setNombre] = useState(categoria.nombre)
-  const [color, setColor] = useState(categoria.color)
-  const [icono, setIcono] = useState(categoria.icono || iconos[0])
+  const [name, setName] = useState(category.name)
+  const [color, setColor] = useState(category.color)
+  const [icon, setIcon] = useState(category.icon || icons[0])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setNombre(categoria.nombre)
-    setColor(categoria.color)
-    setIcono(categoria.icono || iconos[0])
-  }, [categoria])
+    setName(category.name)
+    setColor(category.color)
+    setIcon(category.icon || icons[0])
+  }, [category])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (!nombre) {
+    if (!name) {
       setError(t.createCategory.nameRequired)
       return
     }
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/categorias/${categoria.id}`, {
+      const response = await fetch(`/api/categorias/${category.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          nombre,
+          name,
           color,
-          icono,
+          icon,
         }),
       })
 
@@ -111,8 +111,8 @@ export default function EditCategoryDialog({ categoria, onClose, onSuccess }: Ed
               </label>
               <input
                 type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm"
                 placeholder={t.createCategory.namePlaceholder}
@@ -124,13 +124,13 @@ export default function EditCategoryDialog({ categoria, onClose, onSuccess }: Ed
                 {t.createCategory.iconLabel}
               </label>
               <div className="flex flex-wrap gap-3">
-                {iconos.map((ico) => (
+                {icons.map((ico) => (
                   <button
                     key={ico}
                     type="button"
-                    onClick={() => setIcono(ico)}
+                    onClick={() => setIcon(ico)}
                     className={`w-14 h-14 text-2xl rounded-xl border-2 transition-all duration-200 hover:scale-110 ${
-                      icono === ico
+                      icon === ico
                         ? 'border-primary-500 bg-primary-50 shadow-lg scale-110'
                         : 'border-gray-200 hover:border-gray-300 bg-white/50'
                     }`}
@@ -146,7 +146,7 @@ export default function EditCategoryDialog({ categoria, onClose, onSuccess }: Ed
                 {t.createCategory.colorLabel}
               </label>
               <div className="flex flex-wrap gap-3">
-                {colores.map((col) => (
+                {colors.map((col) => (
                   <button
                     key={col}
                     type="button"

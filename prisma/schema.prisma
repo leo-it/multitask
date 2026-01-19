@@ -22,8 +22,8 @@ model User {
 
   accounts      Account[]
   sessions      Session[]
-  recordatorios Recordatorio[]
-  categorias    Categoria[]
+  reminders     Reminder[]
+  categories    Category[]
 
   @@map("users")
 }
@@ -67,51 +67,51 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-model Categoria {
+model Category {
   id          String        @id @default(cuid())
-  nombre      String
+  name        String
   color       String        @default("#3b82f6")
-  icono       String?
+  icon        String?
   userId      String
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recordatorios Recordatorio[]
+  reminders    Reminder[]
 
   @@index([userId])
   @@map("categorias")
 }
 
-model Recordatorio {
-  id                String    @id @default(cuid())
-  titulo            String
-  descripcion       String?
-  fechaVencimiento  DateTime
-  categoriaId       String?
-  userId            String
-  completado        Boolean   @default(false)
-  fechaCompletado   DateTime? // Fecha en que se completó la tarea (última vez)
-  vecesCompletado   Int       @default(0) // Contador de veces que se ha completado
-  historialCompletados Json?  // Array de fechas de cuando se completó
-  notificacionesActivas Boolean @default(true)
-  frecuenciaRecordatorio String @default("DIARIO") // DIARIO, SEMANAL, MENSUAL
-  recurrente        Boolean   @default(false) // Si es true, se regenera al completarse
-  frecuenciaRecurrencia String? // SEMANAL, MENSUAL, DIARIO - solo si recurrente es true
-  recordatorioPadreId String? // ID del recordatorio original si es una instancia recurrente
-  ultimaNotificacion DateTime?
-  proximaNotificacion DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+model Reminder {
+  id                  String    @id @default(cuid())
+  title               String
+  description         String?
+  dueDate             DateTime
+  categoryId          String?
+  userId              String
+  completed           Boolean   @default(false)
+  completedAt         DateTime?
+  timesCompleted      Int       @default(0)
+  completionHistory   Json?
+  notificationsEnabled Boolean   @default(true)
+  reminderFrequency    String    @default("DAILY")
+  recurring            Boolean   @default(false)
+  recurrenceFrequency  String?
+  parentReminderId     String?
+  lastNotification     DateTime?
+  nextNotification     DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categoria Categoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  category  Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([userId])
-  @@index([fechaVencimiento])
-  @@index([completado])
-  @@index([proximaNotificacion])
-  @@index([recurrente])
-  @@index([recordatorioPadreId])
+  @@index([dueDate])
+  @@index([completed])
+  @@index([nextNotification])
+  @@index([recurring])
+  @@index([parentReminderId])
   @@map("recordatorios")
 }

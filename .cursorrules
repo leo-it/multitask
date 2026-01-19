@@ -4,6 +4,7 @@
 - Do not add comments to code unless explicitly requested by the user
 - Do not add console.log statements unless explicitly requested by the user
 - Write code in English (variables, functions, classes, etc.)
+- Database schema, models, and field names must be in English
 - UI texts should use i18n system (default Spanish)
 - Keep code clean and self-documenting
 
@@ -11,3 +12,4 @@
 - Prefer explicit code over comments
 - Remove debug statements before committing
 - Focus on clear, readable code structure
+- All database models, fields, and relationships must use English naming

@@ -3,25 +3,25 @@
 import { useEffect, useState } from 'react'
 import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import RecordatorioCard from '@/components/RecordatorioCard'
-import CategoriaCard from '@/components/CategoriaCard'
-import CrearRecordatorioDialog from '@/components/CrearRecordatorioDialog'
-import CrearCategoriaDialog from '@/components/CrearCategoriaDialog'
+import ReminderCard from '@/components/ReminderCard'
+import CategoryCard from '@/components/CategoryCard'
+import CreateReminderDialog from '@/components/CreateReminderDialog'
+import CreateCategoryDialog from '@/components/CreateCategoryDialog'
 import EditReminderDialog from '@/components/EditReminderDialog'
 import EditCategoryDialog from '@/components/EditCategoryDialog'
-import { Recordatorio, Categoria } from '@/types'
+import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
 export default function DashboardClient() {
   const router = useRouter()
   const t = useI18n('es')
-  const [reminders, setReminders] = useState<Recordatorio[]>([])
-  const [categories, setCategories] = useState<Categoria[]>([])
+  const [reminders, setReminders] = useState<Reminder[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateReminder, setShowCreateReminder] = useState(false)
   const [showCreateCategory, setShowCreateCategory] = useState(false)
-  const [editingReminder, setEditingReminder] = useState<Recordatorio | null>(null)
-  const [editingCategory, setEditingCategory] = useState<Categoria | null>(null)
+  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [completionFilter, setCompletionFilter] = useState<'todos' | 'pendientes' | 'completados'>('pendientes')
   const [reminderCategoryId, setReminderCategoryId] = useState<string | undefined>(undefined)
@@ -62,40 +62,36 @@ export default function DashboardClient() {
 
   const filteredReminders = remindersArray
     .filter((r) => {
-      if (categoryFilter && r.categoriaId !== categoryFilter) return false
+      if (categoryFilter && r.categoryId !== categoryFilter) return false
       
       if (completionFilter === 'pendientes') {
-        if (!r.completado) return true
-        const dueDate = new Date(r.fechaVencimiento)
+        if (!r.completed) return true
+        const dueDate = new Date(r.dueDate)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         dueDate.setHours(0, 0, 0, 0)
         return dueDate >= today
       }
       
-      if (completionFilter === 'completados' && !r.completado) return false
+      if (completionFilter === 'completados' && !r.completed) return false
       return true
     })
     .sort((a, b) => {
-      // Check if task has completion history (even if completado is false)
-      const aHasHistory = a.vecesCompletado && a.vecesCompletado > 0
-      const bHasHistory = b.vecesCompletado && b.vecesCompletado > 0
+      const aHasHistory = a.timesCompleted && a.timesCompleted > 0
+      const bHasHistory = b.timesCompleted && b.timesCompleted > 0
       
-      // Consider a task "completed" if completado is true OR has history
-      const aIsCompleted = a.completado === true || aHasHistory
-      const bIsCompleted = b.completado === true || bHasHistory
+      const aIsCompleted = a.completed === true || aHasHistory
+      const bIsCompleted = b.completed === true || bHasHistory
       
-      // Non-completed tasks first
       if (aIsCompleted !== bIsCompleted) {
         return aIsCompleted === true ? 1 : -1
       }
-      // Within same completion status, sort by due date (earliest first)
-      return new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     })
 
-  const pendingReminders = remindersArray.filter((r) => !r.completado)
+  const pendingReminders = remindersArray.filter((r) => !r.completed)
   const upcomingDueDates = pendingReminders
-    .sort((a, b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 5)
 
   const handleLogout = async () => {
@@ -183,7 +179,7 @@ export default function DashboardClient() {
             <option value="todas">{t.dashboard.allCategories}</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                {cat.nombre}
+                {cat.name}
               </option>
             ))}
           </select>
@@ -225,15 +221,15 @@ export default function DashboardClient() {
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {categories.map((categoria) => (
-              <CategoriaCard
-                key={categoria.id}
-                categoria={categoria}
+            {categories.map((category) => (
+              <CategoryCard
+                key={category.id}
+                category={category}
                 onUpdate={loadData}
                 onClick={() => {
-                  setCategoryFilter(categoryFilter === categoria.id ? null : categoria.id)
+                  setCategoryFilter(categoryFilter === category.id ? null : category.id)
                 }}
-                isSelected={categoryFilter === categoria.id}
+                isSelected={categoryFilter === category.id}
                 onEdit={setEditingCategory}
                 onAddReminder={(cat) => {
                   setReminderCategoryId(cat.id)
@@ -288,11 +284,11 @@ export default function DashboardClient() {
                 </button>
               </div>
             ) : (
-              filteredReminders.map((recordatorio) => (
-                <RecordatorioCard
-                  key={recordatorio.id}
-                  recordatorio={recordatorio}
-                  categorias={categories}
+              filteredReminders.map((reminder) => (
+                <ReminderCard
+                  key={reminder.id}
+                  reminder={reminder}
+                  categories={categories}
                   onUpdate={loadData}
                   onEdit={setEditingReminder}
                 />
@@ -306,11 +302,11 @@ export default function DashboardClient() {
           <div className="mt-10">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.dashboard.upcomingDueDates}</h2>
             <div className="space-y-4">
-              {upcomingDueDates.map((recordatorio) => (
-                <RecordatorioCard
-                  key={recordatorio.id}
-                  recordatorio={recordatorio}
-                  categorias={categories}
+              {upcomingDueDates.map((reminder) => (
+                <ReminderCard
+                  key={reminder.id}
+                  reminder={reminder}
+                  categories={categories}
                   onUpdate={loadData}
                   onEdit={setEditingReminder}
                 />
@@ -340,8 +336,8 @@ export default function DashboardClient() {
 
       {/* Dialogs */}
       {showCreateReminder && (
-        <CrearRecordatorioDialog
-          categorias={categories}
+        <CreateReminderDialog
+          categories={categories}
           onClose={() => {
             setShowCreateReminder(false)
             setReminderCategoryId(undefined)
@@ -352,7 +348,7 @@ export default function DashboardClient() {
       )}
 
       {showCreateCategory && (
-        <CrearCategoriaDialog
+        <CreateCategoryDialog
           onClose={() => setShowCreateCategory(false)}
           onSuccess={loadData}
         />
@@ -360,8 +356,8 @@ export default function DashboardClient() {
 
       {editingReminder && (
         <EditReminderDialog
-          recordatorio={editingReminder}
-          categorias={categories}
+          reminder={editingReminder}
+          categories={categories}
           onClose={() => setEditingReminder(null)}
           onSuccess={loadData}
         />
@@ -369,7 +365,7 @@ export default function DashboardClient() {
 
       {editingCategory && (
         <EditCategoryDialog
-          categoria={editingCategory}
+          category={editingCategory}
           onClose={() => setEditingCategory(null)}
           onSuccess={loadData}
         />

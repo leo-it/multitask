@@ -1,48 +1,48 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Recordatorio, Categoria } from '@/types'
+import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
 interface EditReminderDialogProps {
-  recordatorio: Recordatorio
-  categorias: Categoria[]
+  reminder: Reminder
+  categories: Category[]
   onClose: () => void
   onSuccess: () => void
 }
 
 export default function EditReminderDialog({
-  recordatorio,
-  categorias,
+  reminder,
+  categories,
   onClose,
   onSuccess,
 }: EditReminderDialogProps) {
   const t = useI18n('es')
-  const [title, setTitle] = useState(recordatorio.titulo)
-  const [description, setDescription] = useState(recordatorio.descripcion || '')
+  const [title, setTitle] = useState(reminder.title)
+  const [description, setDescription] = useState(reminder.description || '')
   const [dueDate, setDueDate] = useState(
-    recordatorio.fechaVencimiento ? new Date(recordatorio.fechaVencimiento).toISOString().split('T')[0] : ''
+    reminder.dueDate ? new Date(reminder.dueDate).toISOString().split('T')[0] : ''
   )
-  const [categoryId, setCategoryId] = useState<string>(recordatorio.categoriaId || '')
-  const [notificationsActive, setNotificationsActive] = useState(recordatorio.notificacionesActivas)
-  const [reminderFrequency, setReminderFrequency] = useState(recordatorio.frecuenciaRecordatorio)
-  const [recurring, setRecurring] = useState(recordatorio.recurrente)
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState(recordatorio.frecuenciaRecurrencia || 'SEMANAL')
+  const [categoryId, setCategoryId] = useState<string>(reminder.categoryId || '')
+  const [notificationsActive, setNotificationsActive] = useState(reminder.notificationsEnabled)
+  const [reminderFrequency, setReminderFrequency] = useState(reminder.reminderFrequency)
+  const [recurring, setRecurring] = useState(reminder.recurring)
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState(reminder.recurrenceFrequency || 'WEEKLY')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setTitle(recordatorio.titulo)
-    setDescription(recordatorio.descripcion || '')
+    setTitle(reminder.title)
+    setDescription(reminder.description || '')
     setDueDate(
-      recordatorio.fechaVencimiento ? new Date(recordatorio.fechaVencimiento).toISOString().split('T')[0] : ''
+      reminder.dueDate ? new Date(reminder.dueDate).toISOString().split('T')[0] : ''
     )
-    setCategoryId(recordatorio.categoriaId || '')
-    setNotificationsActive(recordatorio.notificacionesActivas)
-    setReminderFrequency(recordatorio.frecuenciaRecordatorio)
-    setRecurring(recordatorio.recurrente)
-    setRecurrenceFrequency(recordatorio.frecuenciaRecurrencia || 'SEMANAL')
-  }, [recordatorio])
+    setCategoryId(reminder.categoryId || '')
+    setNotificationsActive(reminder.notificationsEnabled)
+    setReminderFrequency(reminder.reminderFrequency)
+    setRecurring(reminder.recurring)
+    setRecurrenceFrequency(reminder.recurrenceFrequency || 'WEEKLY')
+  }, [reminder])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,17 +60,17 @@ export default function EditReminderDialog({
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
+      const response = await fetch(`/api/recordatorios/${reminder.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          titulo: title,
-          descripcion: description || null,
-          fechaVencimiento: recurring ? null : dueDate || null,
-          categoriaId: categoryId || null,
-          notificacionesActivas: notificationsActive,
-          frecuenciaRecordatorio: reminderFrequency,
+          title,
+          description: description || null,
+          dueDate: recurring ? null : dueDate || null,
+          categoryId: categoryId || null,
+          notificationsEnabled: notificationsActive,
+          reminderFrequency,
         }),
       })
 
@@ -172,9 +172,9 @@ export default function EditReminderDialog({
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm font-medium"
               >
                 <option value="">{t.createReminder.noCategory}</option>
-                {categorias.map((cat) => (
+                {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
-                    {cat.nombre}
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -189,9 +189,9 @@ export default function EditReminderDialog({
                 onChange={(e) => setReminderFrequency(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm font-medium"
               >
-                <option value="DIARIO">{t.createReminder.daily}</option>
-                <option value="SEMANAL">{t.createReminder.weekly}</option>
-                <option value="MENSUAL">{t.createReminder.monthly}</option>
+                <option value="DAILY">{t.createReminder.daily}</option>
+                <option value="WEEKLY">{t.createReminder.weekly}</option>
+                <option value="MONTHLY">{t.createReminder.monthly}</option>
               </select>
             </div>
 

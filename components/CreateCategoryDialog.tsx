@@ -3,29 +3,29 @@
 import { useState } from 'react'
 import { useI18n } from '@/hooks/useI18n'
 
-interface CrearCategoriaDialogProps {
+interface CreateCategoryDialogProps {
   onClose: () => void
   onSuccess: () => void
 }
 
-const colores = [
-  '#3b82f6', // azul
-  '#ef4444', // rojo
-  '#10b981', // verde
-  '#f59e0b', // amarillo
-  '#8b5cf6', // morado
-  '#ec4899', // rosa
-  '#06b6d4', // cyan
-  '#f97316', // naranja
+const colors = [
+  '#3b82f6',
+  '#ef4444',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#06b6d4',
+  '#f97316',
 ]
 
-const iconos = ['💳', '🏋️', '🏠', '🚗', '📱', '💊', '🎓', '🍔', '✈️', '🎁']
+const icons = ['💳', '🏋️', '🏠', '🚗', '📱', '💊', '🎓', '🍔', '✈️', '🎁']
 
-export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCategoriaDialogProps) {
+export default function CreateCategoryDialog({ onClose, onSuccess }: CreateCategoryDialogProps) {
   const t = useI18n('es')
-  const [nombre, setNombre] = useState('')
-  const [color, setColor] = useState(colores[0])
-  const [icono, setIcono] = useState(iconos[0])
+  const [name, setName] = useState('')
+  const [color, setColor] = useState(colors[0])
+  const [icon, setIcon] = useState(icons[0])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -33,7 +33,7 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
     e.preventDefault()
     setError('')
 
-    if (!nombre) {
+    if (!name) {
       setError(t.createCategory.nameRequired)
       return
     }
@@ -45,9 +45,9 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          nombre,
+          name,
           color,
-          icono,
+          icon,
         }),
       })
 
@@ -103,8 +103,8 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
               </label>
               <input
                 type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm"
                 placeholder={t.createCategory.namePlaceholder}
@@ -116,13 +116,13 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
                 {t.createCategory.iconLabel}
               </label>
               <div className="flex flex-wrap gap-3">
-                {iconos.map((ico) => (
+                {icons.map((ico) => (
                   <button
                     key={ico}
                     type="button"
-                    onClick={() => setIcono(ico)}
+                    onClick={() => setIcon(ico)}
                     className={`w-14 h-14 text-2xl rounded-xl border-2 transition-all duration-200 hover:scale-110 ${
-                      icono === ico
+                      icon === ico
                         ? 'border-primary-500 bg-primary-50 shadow-lg scale-110'
                         : 'border-gray-200 hover:border-gray-300 bg-white/50'
                     }`}
@@ -138,7 +138,7 @@ export default function CrearCategoriaDialog({ onClose, onSuccess }: CrearCatego
                 {t.createCategory.colorLabel}
               </label>
               <div className="flex flex-wrap gap-3">
-                {colores.map((col) => (
+                {colors.map((col) => (
                   <button
                     key={col}
                     type="button"

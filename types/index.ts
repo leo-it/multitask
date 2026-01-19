@@ -1,32 +1,32 @@
-export interface Categoria {
+export interface Category {
   id: string
-  nombre: string
+  name: string
   color: string
-  icono?: string | null
+  icon?: string | null
   userId: string
   createdAt: string
   updatedAt: string
 }
 
-export interface Recordatorio {
+export interface Reminder {
   id: string
-  titulo: string
-  descripcion?: string | null
-  fechaVencimiento: string
-  categoriaId?: string | null
+  title: string
+  description?: string | null
+  dueDate: string
+  categoryId?: string | null
   userId: string
-  completado: boolean
-  fechaCompletado?: string | null
-  vecesCompletado?: number
-  historialCompletados?: string[] // Array de fechas ISO string
-  notificacionesActivas: boolean
-  frecuenciaRecordatorio: string
-  recurrente: boolean
-  frecuenciaRecurrencia?: string | null
-  recordatorioPadreId?: string | null
-  ultimaNotificacion?: string | null
-  proximaNotificacion?: string | null
+  completed: boolean
+  completedAt?: string | null
+  timesCompleted?: number
+  completionHistory?: string[]
+  notificationsEnabled: boolean
+  reminderFrequency: string
+  recurring: boolean
+  recurrenceFrequency?: string | null
+  parentReminderId?: string | null
+  lastNotification?: string | null
+  nextNotification?: string | null
   createdAt: string
   updatedAt: string
-  categoria?: Categoria | null
+  category?: Category | null
 }

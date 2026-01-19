@@ -4,9 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const updateCategorySchema = z.object({
-  nombre: z.string().min(1).max(100).optional(),
+  name: z.string().min(1).max(100).optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  icono: z.string().optional().nullable(),
+  icon: z.string().optional().nullable(),
 })
 
 export async function PATCH(
@@ -20,18 +20,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const categoria = await prisma.categoria.findUnique({
+    const category = await prisma.category.findUnique({
       where: { id: params.id },
     })
 
-    if (!categoria || categoria.userId !== session.user.id) {
+    if (!category || category.userId !== session.user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
     const body = await request.json()
     const data = updateCategorySchema.parse(body)
 
-    const updated = await prisma.categoria.update({
+    const updated = await prisma.category.update({
       where: { id: params.id },
       data,
     })
@@ -63,15 +63,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const categoria = await prisma.categoria.findUnique({
+    const category = await prisma.category.findUnique({
       where: { id: params.id },
     })
 
-    if (!categoria || categoria.userId !== session.user.id) {
+    if (!category || category.userId !== session.user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    await prisma.categoria.delete({
+    await prisma.category.delete({
       where: { id: params.id },
     })
 

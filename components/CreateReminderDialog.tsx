@@ -1,31 +1,31 @@
 'use client'
 
 import { useState } from 'react'
-import { Categoria } from '@/types'
+import { Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
-interface CrearRecordatorioDialogProps {
-  categorias: Categoria[]
+interface CreateReminderDialogProps {
+  categories: Category[]
   onClose: () => void
   onSuccess: () => void
   initialCategoryId?: string
 }
 
-export default function CrearRecordatorioDialog({
-  categorias,
+export default function CreateReminderDialog({
+  categories,
   onClose,
   onSuccess,
   initialCategoryId,
-}: CrearRecordatorioDialogProps) {
+}: CreateReminderDialogProps) {
   const t = useI18n('es')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [categoryId, setCategoryId] = useState<string>(initialCategoryId || '')
   const [notificationsActive, setNotificationsActive] = useState(true)
-  const [reminderFrequency, setReminderFrequency] = useState('DIARIO')
+  const [reminderFrequency, setReminderFrequency] = useState('DAILY')
   const [recurring, setRecurring] = useState(false)
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState('SEMANAL')
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState('WEEKLY')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -50,14 +50,14 @@ export default function CrearRecordatorioDialog({
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          titulo: title,
-          descripcion: description || null,
-          fechaVencimiento: recurring ? null : dueDate || null,
-          categoriaId: categoryId || null,
-          notificacionesActivas: notificationsActive,
-          frecuenciaRecordatorio: reminderFrequency,
-          recurrente: recurring,
-          frecuenciaRecurrencia: recurring ? recurrenceFrequency : null,
+          title,
+          description: description || null,
+          dueDate: recurring ? null : dueDate || null,
+          categoryId: categoryId || null,
+          notificationsEnabled: notificationsActive,
+          reminderFrequency,
+          recurring,
+          recurrenceFrequency: recurring ? recurrenceFrequency : null,
         }),
       })
 
@@ -159,9 +159,9 @@ export default function CrearRecordatorioDialog({
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm font-medium"
               >
                 <option value="">{t.createReminder.noCategory}</option>
-                {categorias.map((cat) => (
+                {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
-                    {cat.nombre}
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -176,9 +176,9 @@ export default function CrearRecordatorioDialog({
                 onChange={(e) => setReminderFrequency(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white/50 backdrop-blur-sm font-medium"
               >
-                <option value="DIARIO">{t.createReminder.daily}</option>
-                <option value="SEMANAL">{t.createReminder.weekly}</option>
-                <option value="MENSUAL">{t.createReminder.monthly}</option>
+                <option value="DAILY">{t.createReminder.daily}</option>
+                <option value="WEEKLY">{t.createReminder.weekly}</option>
+                <option value="MONTHLY">{t.createReminder.monthly}</option>
               </select>
             </div>
 
@@ -221,16 +221,16 @@ export default function CrearRecordatorioDialog({
                       required
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                     >
-                      <option value="DIARIO">{t.createReminder.recurrenceDaily}</option>
-                      <option value="SEMANAL">{t.createReminder.recurrenceWeekly}</option>
-                      <option value="MENSUAL">{t.createReminder.recurrenceMonthly}</option>
+                      <option value="DAILY">{t.createReminder.recurrenceDaily}</option>
+                      <option value="WEEKLY">{t.createReminder.recurrenceWeekly}</option>
+                      <option value="MONTHLY">{t.createReminder.recurrenceMonthly}</option>
                     </select>
                   </div>
                   <p className="text-xs text-gray-500">
                     ✅ {t.createReminder.recurrenceInfo}
-                    {recurrenceFrequency === 'SEMANAL' && t.createReminder.recurrenceWeeklyInfo}
-                    {recurrenceFrequency === 'MENSUAL' && t.createReminder.recurrenceMonthlyInfo}
-                    {recurrenceFrequency === 'DIARIO' && t.createReminder.recurrenceDailyInfo}
+                    {recurrenceFrequency === 'WEEKLY' && t.createReminder.recurrenceWeeklyInfo}
+                    {recurrenceFrequency === 'MONTHLY' && t.createReminder.recurrenceMonthlyInfo}
+                    {recurrenceFrequency === 'DAILY' && t.createReminder.recurrenceDailyInfo}
                   </p>
                 </div>
               )}

@@ -1,19 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Categoria } from '@/types'
+import { Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
-interface CategoriaCardProps {
-  categoria: Categoria
+interface CategoryCardProps {
+  category: Category
   onUpdate: () => void
   onClick?: () => void
   isSelected?: boolean
-  onEdit?: (categoria: Categoria) => void
-  onAddReminder?: (categoria: Categoria) => void
+  onEdit?: (category: Category) => void
+  onAddReminder?: (category: Category) => void
 }
 
-export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected = false, onEdit, onAddReminder }: CategoriaCardProps) {
+export default function CategoryCard({ category, onUpdate, onClick, isSelected = false, onEdit, onAddReminder }: CategoryCardProps) {
   const t = useI18n('es')
   const [loading, setLoading] = useState(false)
 
@@ -22,7 +22,7 @@ export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/categorias/${categoria.id}`, {
+      const response = await fetch(`/api/categorias/${category.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -53,8 +53,8 @@ export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected
       }`}
       style={{ 
         ...(isSelected && { 
-          borderColor: categoria.color,
-          ringColor: categoria.color + '40',
+          borderColor: category.color,
+          ringColor: category.color + '40',
         } as React.CSSProperties)
       }}
     >
@@ -62,19 +62,19 @@ export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              {categoria.icono && (
+              {category.icon && (
                 <div 
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm"
-                  style={{ backgroundColor: categoria.color + '20' }}
+                  style={{ backgroundColor: category.color + '20' }}
                 >
-                  {categoria.icono}
+                  {category.icon}
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <h3 className={`font-bold text-base truncate ${
                   isSelected ? 'text-gray-900' : 'text-gray-800'
                 }`}>
-                  {categoria.nombre}
+                  {category.name}
                 </h3>
                 {isSelected && (
                   <span className="text-xs font-semibold text-primary-600 mt-0.5 inline-block">
@@ -84,29 +84,27 @@ export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected
               </div>
             </div>
             
-            {/* Barra de progreso decorativa */}
             <div
               className="w-full h-2 rounded-full overflow-hidden"
-              style={{ backgroundColor: categoria.color + '15' }}
+              style={{ backgroundColor: category.color + '15' }}
             >
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{ 
-                  backgroundColor: categoria.color, 
+                  backgroundColor: category.color, 
                   width: '100%',
-                  boxShadow: `0 0 8px ${categoria.color}60`
+                  boxShadow: `0 0 8px ${category.color}60`
                 }}
               />
             </div>
           </div>
           
-          {/* Action buttons */}
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
             {onAddReminder && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  onAddReminder(categoria)
+                  onAddReminder(category)
                 }}
                 disabled={loading}
                 className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 disabled:opacity-50 flex-shrink-0"
@@ -121,7 +119,7 @@ export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  onEdit(categoria)
+                  onEdit(category)
                 }}
                 disabled={loading}
                 className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all duration-200 disabled:opacity-50 flex-shrink-0"

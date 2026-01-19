@@ -1,52 +1,47 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Recordatorio, Categoria } from '@/types'
+import { Reminder, Category } from '@/types'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useI18n } from '@/hooks/useI18n'
 
-interface RecordatorioCardProps {
-  recordatorio: Recordatorio
-  categorias: Categoria[]
+interface ReminderCardProps {
+  reminder: Reminder
+  categories: Category[]
   onUpdate: () => void
-  onEdit?: (recordatorio: Recordatorio) => void
+  onEdit?: (reminder: Reminder) => void
 }
 
-export default function RecordatorioCard({ recordatorio, categorias, onUpdate, onEdit }: RecordatorioCardProps) {
+export default function ReminderCard({ reminder, categories, onUpdate, onEdit }: ReminderCardProps) {
   const t = useI18n('es')
   const [loading, setLoading] = useState(false)
-  const [completedLocal, setCompletedLocal] = useState(recordatorio.completado)
+  const [completedLocal, setCompletedLocal] = useState(reminder.completed)
   const [editingHistoryIndex, setEditingHistoryIndex] = useState<number | null>(null)
   const [editHistoryDate, setEditHistoryDate] = useState('')
   const isUpdatingRef = useRef(false)
-  const lastReminderIdRef = useRef(recordatorio.id)
-  const lastServerCompletedRef = useRef(recordatorio.completado)
-  const categoria = categorias.find((c) => c.id === recordatorio.categoriaId)
+  const lastReminderIdRef = useRef(reminder.id)
+  const lastServerCompletedRef = useRef(reminder.completed)
+  const category = categories.find((c) => c.id === reminder.categoryId)
 
   // Sync local state when server reminder changes
   useEffect(() => {
-    const isNewReminder = lastReminderIdRef.current !== recordatorio.id
+    const isNewReminder = lastReminderIdRef.current !== reminder.id
     if (isNewReminder) {
-      lastReminderIdRef.current = recordatorio.id
-      lastServerCompletedRef.current = recordatorio.completado
+      lastReminderIdRef.current = reminder.id
+      lastServerCompletedRef.current = reminder.completed
       isUpdatingRef.current = false
-      setCompletedLocal(recordatorio.completado)
+      setCompletedLocal(reminder.completed)
       return
     }
     
-    // Only sync if:
-    // 1. Not currently updating
-    // 2. Server state differs from local
-    // 3. Server state differs from last known server state
-    // This prevents infinite loops when server hasn't processed update yet
-    const serverChanged = lastServerCompletedRef.current !== recordatorio.completado
-    if (!isUpdatingRef.current && completedLocal !== recordatorio.completado && serverChanged) {
-      lastServerCompletedRef.current = recordatorio.completado
-      setCompletedLocal(recordatorio.completado)
+    const serverChanged = lastServerCompletedRef.current !== reminder.completed
+    if (!isUpdatingRef.current && completedLocal !== reminder.completed && serverChanged) {
+      lastServerCompletedRef.current = reminder.completed
+      setCompletedLocal(reminder.completed)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recordatorio.id, recordatorio.completado])
+  }, [reminder.id, reminder.completed])
 
   const toggleCompleted = async () => {
     if (loading) return
@@ -57,9 +52,9 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
     setLoading(true)
     
     try {
-      const requestBody = { completado: !isUnmarking }
+      const requestBody = { completed: !isUnmarking }
       
-      const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
+      const response = await fetch(`/api/recordatorios/${reminder.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -73,8 +68,8 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
           setCompletedLocal(false)
           lastServerCompletedRef.current = false
         } else {
-          setCompletedLocal(updatedReminder.completado)
-          lastServerCompletedRef.current = updatedReminder.completado
+          setCompletedLocal(updatedReminder.completed)
+          lastServerCompletedRef.current = updatedReminder.completed
         }
         
         setTimeout(() => {
@@ -97,11 +92,11 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
   const toggleNotifications = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
+      const response = await fetch(`/api/recordatorios/${reminder.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ notificacionesActivas: !recordatorio.notificacionesActivas }),
+        body: JSON.stringify({ notificationsEnabled: !reminder.notificationsEnabled }),
       })
 
       if (response.ok) {
@@ -118,7 +113,7 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
+      const response = await fetch(`/api/recordatorios/${reminder.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -135,14 +130,14 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
   const updateHistory = async (newHistory: string[]) => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/recordatorios/${recordatorio.id}`, {
+      const response = await fetch(`/api/recordatorios/${reminder.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          historialCompletados: newHistory,
-          vecesCompletado: newHistory.length,
-          fechaCompletado: newHistory.length > 0 ? newHistory[newHistory.length - 1] : null,
+          completionHistory: newHistory,
+          timesCompleted: newHistory.length,
+          completedAt: newHistory.length > 0 ? newHistory[newHistory.length - 1] : null,
         }),
       })
 
@@ -155,16 +150,16 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
     }
   }
 
-  const dueDate = new Date(recordatorio.fechaVencimiento)
+  const dueDate = new Date(reminder.dueDate)
   const today = new Date()
   const daysRemaining = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
   const isExpired = daysRemaining < 0 && !completedLocal
   
-  const completionDate = recordatorio.fechaCompletado ? new Date(recordatorio.fechaCompletado) : null
+  const completionDate = reminder.completedAt ? new Date(reminder.completedAt) : null
   
   useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recordatorio.id, recordatorio.completado])
+  }, [reminder.id, reminder.completed])
 
   return (
     <div
@@ -213,7 +208,7 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
                         : 'text-gray-900'
                     }`}
                   >
-                    {recordatorio.titulo}
+                    {reminder.title}
                   </h3>
                   {completedLocal && (
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,29 +217,29 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
                   )}
                 </div>
                 
-                {recordatorio.descripcion && (
+                {reminder.description && (
                   <p className={`text-sm mb-3 ${
                     completedLocal ? 'text-gray-400' : 'text-gray-600'
                   }`}>
-                    {recordatorio.descripcion}
+                    {reminder.description}
                   </p>
                 )}
 
                 {/* Badges */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {categoria && (
+                  {category && (
                     <span
                       className="px-3 py-1 text-xs font-semibold rounded-full text-white shadow-sm"
                       style={{ 
-                        backgroundColor: categoria.color,
-                        boxShadow: `0 2px 8px ${categoria.color}40`
+                        backgroundColor: category.color,
+                        boxShadow: `0 2px 8px ${category.color}40`
                       }}
                     >
-                      {categoria.icono && <span className="mr-1">{categoria.icono}</span>}
-                      {categoria.nombre}
+                      {category.icon && <span className="mr-1">{category.icon}</span>}
+                      {category.name}
                     </span>
                   )}
-                  {recordatorio.recurrente && (
+                  {reminder.recurring && (
                     <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm">
                       🔄 {t.reminderCard.recurring}
                     </span>
@@ -288,7 +283,7 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
                 </div>
                 
                 {/* Completion info with counter and history */}
-                {recordatorio.vecesCompletado && recordatorio.vecesCompletado > 0 && (
+                {reminder.timesCompleted && reminder.timesCompleted > 0 && (
                   <div className="mt-3 p-3 bg-green-50 rounded-xl border border-green-200">
                     <div className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,7 +291,7 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
                       </svg>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-green-800">
-                          ✓ {t.reminderCard.completedTimes} {recordatorio.vecesCompletado} {recordatorio.vecesCompletado === 1 ? t.reminderCard.time : t.reminderCard.times}
+                          ✓ {t.reminderCard.completedTimes} {reminder.timesCompleted} {reminder.timesCompleted === 1 ? t.reminderCard.time : t.reminderCard.times}
                         </p>
                         {completionDate && (
                           <p className="text-xs text-green-600 mt-0.5">
@@ -305,18 +300,18 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
                         )}
                         {(() => {
                           let history: string[] = []
-                          if (recordatorio.historialCompletados) {
-                            if (Array.isArray(recordatorio.historialCompletados)) {
-                              history = recordatorio.historialCompletados
-                            } else if (typeof recordatorio.historialCompletados === 'string') {
+                          if (reminder.completionHistory) {
+                            if (Array.isArray(reminder.completionHistory)) {
+                              history = reminder.completionHistory
+                            } else if (typeof reminder.completionHistory === 'string') {
                               try {
-                                history = JSON.parse(recordatorio.historialCompletados)
+                                history = JSON.parse(reminder.completionHistory)
                               } catch {
                                 history = []
                               }
-                            } else if (typeof recordatorio.historialCompletados === 'object') {
+                            } else if (typeof reminder.completionHistory === 'object') {
                               try {
-                                history = Object.values(recordatorio.historialCompletados) as string[]
+                                history = Object.values(reminder.completionHistory) as string[]
                               } catch {
                                 history = []
                               }
@@ -419,13 +414,13 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
                   <label className="flex items-center gap-2 cursor-pointer group/notif">
                     <input
                       type="checkbox"
-                      checked={recordatorio.notificacionesActivas}
+                      checked={reminder.notificationsEnabled}
                       onChange={toggleNotifications}
                       disabled={loading}
                       className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500 cursor-pointer"
                     />
                     <span className="text-xs font-medium text-gray-600 group-hover/notif:text-gray-900 transition-colors">
-                      🔔 {t.reminderCard.notifications} {recordatorio.notificacionesActivas ? t.reminderCard.active : t.reminderCard.inactive}
+                      🔔 {t.reminderCard.notifications} {reminder.notificationsEnabled ? t.reminderCard.active : t.reminderCard.inactive}
                     </span>
                   </label>
                 </div>
@@ -435,7 +430,7 @@ export default function RecordatorioCard({ recordatorio, categorias, onUpdate, o
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
                 {onEdit && (
                   <button
-                    onClick={() => onEdit(recordatorio)}
+                    onClick={() => onEdit(reminder)}
                     disabled={loading}
                     className="flex-shrink-0 p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all duration-200 disabled:opacity-50"
                     title={t.common.edit}

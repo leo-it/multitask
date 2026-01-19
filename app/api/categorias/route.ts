@@ -3,10 +3,10 @@ import { getServerSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
-const categoriaSchema = z.object({
-  nombre: z.string().min(1).max(100),
+const categorySchema = z.object({
+  name: z.string().min(1).max(100),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  icono: z.string().optional().nullable(),
+  icon: z.string().optional().nullable(),
 })
 
 export async function GET() {
@@ -17,15 +17,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const categorias = await prisma.categoria.findMany({
+    const categories = await prisma.category.findMany({
       where: { userId: session.user.id },
-      orderBy: { nombre: 'asc' },
+      orderBy: { name: 'asc' },
     })
 
-    return NextResponse.json(categorias)
+    return NextResponse.json(categories)
   } catch (error) {
     return NextResponse.json(
-      { error: 'Error al obtener categorías' },
+      { error: 'Error fetching categories' },
       { status: 500 }
     )
   }
@@ -40,20 +40,22 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const data = categoriaSchema.parse(body)
+    const data = categorySchema.parse(body)
 
-    const categoria = await prisma.categoria.create({
+    const category = await prisma.category.create({
       data: {
-        ...data,
+        name: data.name,
+        color: data.color,
+        icon: data.icon,
         userId: session.user.id,
       },
     })
 
-    return NextResponse.json(categoria, { status: 201 })
+    return NextResponse.json(category, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Datos inválidos', details: error.errors },
+        { error: 'Invalid data', details: error.errors },
         { status: 400 }
       )
     }

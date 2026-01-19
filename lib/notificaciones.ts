@@ -1,34 +1,27 @@
-// Sistema de notificaciones para recordatorios
-// En el futuro, esto se puede expandir para usar Web Push API
-
 import { prisma } from './prisma'
 
 export async function procesarNotificaciones() {
-  const ahora = new Date()
+  const now = new Date()
 
-  // Obtener recordatorios que necesitan notificación
-  const recordatorios = await prisma.recordatorio.findMany({
+  const reminders = await prisma.reminder.findMany({
     where: {
-      notificacionesActivas: true,
-      completado: false,
+      notificationsEnabled: true,
+      completed: false,
       OR: [
-        // Próxima notificación programada
         {
-          proximaNotificacion: {
-            lte: ahora,
+          nextNotification: {
+            lte: now,
           },
         },
-        // O vencidos que necesitan re-notificación
         {
-          fechaVencimiento: {
-            lte: ahora,
+          dueDate: {
+            lte: now,
           },
-          ultimaNotificacion: {
+          lastNotification: {
             OR: [
               null,
               {
-                // Última notificación hace más de un día (para frecuencia diaria)
-                lt: new Date(ahora.getTime() - 24 * 60 * 60 * 1000),
+                lt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
               },
             ],
           },
@@ -36,47 +29,36 @@ export async function procesarNotificaciones() {
       ],
     },
     include: {
-      categoria: true,
+      category: true,
       user: true,
     },
   })
 
-  for (const recordatorio of recordatorios) {
-    // Calcular próxima notificación según frecuencia
-    let proximaNotificacion: Date | null = null
+  for (const reminder of reminders) {
+    let nextNotification: Date | null = null
 
-    if (recordatorio.frecuenciaRecordatorio === 'DIARIO') {
-      proximaNotificacion = new Date(ahora)
-      proximaNotificacion.setDate(proximaNotificacion.getDate() + 1)
-    } else if (recordatorio.frecuenciaRecordatorio === 'SEMANAL') {
-      proximaNotificacion = new Date(ahora)
-      proximaNotificacion.setDate(proximaNotificacion.getDate() + 7)
-    } else if (recordatorio.frecuenciaRecordatorio === 'MENSUAL') {
-      proximaNotificacion = new Date(ahora)
-      proximaNotificacion.setMonth(proximaNotificacion.getMonth() + 1)
+    if (reminder.reminderFrequency === 'DAILY') {
+      nextNotification = new Date(now)
+      nextNotification.setDate(nextNotification.getDate() + 1)
+    } else if (reminder.reminderFrequency === 'WEEKLY') {
+      nextNotification = new Date(now)
+      nextNotification.setDate(nextNotification.getDate() + 7)
+    } else if (reminder.reminderFrequency === 'MONTHLY') {
+      nextNotification = new Date(now)
+      nextNotification.setMonth(nextNotification.getMonth() + 1)
     }
 
-    // Actualizar recordatorio con nueva fecha de notificación
-    await prisma.recordatorio.update({
-      where: { id: recordatorio.id },
+    await prisma.reminder.update({
+      where: { id: reminder.id },
       data: {
-        ultimaNotificacion: ahora,
-        proximaNotificacion,
+        lastNotification: now,
+        nextNotification,
       },
     })
-
-    // TODO: Implementar Web Push API o servicio de notificaciones
-    // await enviarNotificacionPush(recordatorio.user, recordatorio)
   }
 
-  return recordatorios.length
+  return reminders.length
 }
 
-// Función para enviar notificaciones push (a implementar)
-async function enviarNotificacionPush(user: any, recordatorio: any) {
-  // Implementar usando Web Push API
-  // Requiere:
-  // 1. Subscription del usuario (guardada en BD)
-  // 2. VAPID keys
-  // 3. Servicio de notificaciones push
+async function enviarNotificacionPush(user: any, reminder: any) {
 }

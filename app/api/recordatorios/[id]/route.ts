@@ -4,16 +4,16 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const updateSchema = z.object({
-  titulo: z.string().min(1).max(200).optional(),
-  descripcion: z.string().max(1000).optional().nullable(),
-  fechaVencimiento: z.string().datetime().optional(),
-  categoriaId: z.string().optional().nullable(),
-  completado: z.boolean().optional(),
-  notificacionesActivas: z.boolean().optional(),
-  frecuenciaRecordatorio: z.enum(['DIARIO', 'SEMANAL', 'MENSUAL']).optional(),
-  historialCompletados: z.array(z.string()).optional(),
-  vecesCompletado: z.number().int().min(0).optional(),
-  fechaCompletado: z.string().datetime().nullable().optional(),
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  dueDate: z.string().datetime().optional(),
+  categoryId: z.string().optional().nullable(),
+  completed: z.boolean().optional(),
+  notificationsEnabled: z.boolean().optional(),
+  reminderFrequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY']).optional(),
+  completionHistory: z.array(z.string()).optional(),
+  timesCompleted: z.number().int().min(0).optional(),
+  completedAt: z.string().datetime().nullable().optional(),
 })
 
 export async function PATCH(
@@ -27,18 +27,17 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const recordatorio = await prisma.recordatorio.findUnique({
+    const reminder = await prisma.reminder.findUnique({
       where: { id: params.id },
     })
 
-    if (!recordatorio || recordatorio.userId !== session.user.id) {
+    if (!reminder || reminder.userId !== session.user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    // Type assertion to include fields that exist in DB but may not be in generated types
-    const reminder = recordatorio as typeof recordatorio & {
-      historialCompletados?: string[] | object | null
-      vecesCompletado?: number
+    const reminderWithHistory = reminder as typeof reminder & {
+      completionHistory?: string[] | object | null
+      timesCompleted?: number
     }
 
     const body = await request.json()
@@ -46,123 +45,106 @@ export async function PATCH(
 
     const updateData: any = { ...data }
 
-    // Convertir fechaVencimiento a Date si viene como string
-    if (data.fechaVencimiento) {
-      updateData.fechaVencimiento = new Date(data.fechaVencimiento)
+    if (data.dueDate) {
+      updateData.dueDate = new Date(data.dueDate)
     }
 
-    // Handle direct history updates (for edit/delete history entries)
-    const isDirectHistoryUpdate = data.historialCompletados !== undefined
+    const isDirectHistoryUpdate = data.completionHistory !== undefined
     
     if (isDirectHistoryUpdate) {
-      updateData.historialCompletados = data.historialCompletados
-      if (data.fechaCompletado) {
-        updateData.fechaCompletado = new Date(data.fechaCompletado)
-      } else if (data.historialCompletados.length === 0) {
-        updateData.fechaCompletado = null
+      updateData.completionHistory = data.completionHistory
+      if (data.completedAt) {
+        updateData.completedAt = new Date(data.completedAt)
+      } else if (data.completionHistory.length === 0) {
+        updateData.completedAt = null
       } else {
-        updateData.fechaCompletado = new Date(data.historialCompletados[data.historialCompletados.length - 1])
+        updateData.completedAt = new Date(data.completionHistory[data.completionHistory.length - 1])
       }
     }
 
-    // Si se marca como completado, SIEMPRE agregar al historial (permitir múltiples veces)
-    // NO cambiar el estado de completado permanentemente, solo agregar al historial
-    // Skip this if we're doing a direct history update
-    if (!isDirectHistoryUpdate && data.completado !== undefined && data.completado === true) {
-      const fechaCompletado = new Date()
+    if (!isDirectHistoryUpdate && data.completed !== undefined && data.completed === true) {
+      const completedAt = new Date()
       
-      // Obtener historial actual o crear uno nuevo
-      let historialActual: string[] = []
-      if (reminder.historialCompletados) {
-        if (typeof reminder.historialCompletados === 'string') {
+      let currentHistory: string[] = []
+      if (reminderWithHistory.completionHistory) {
+        if (typeof reminderWithHistory.completionHistory === 'string') {
           try {
-            historialActual = JSON.parse(reminder.historialCompletados)
+            currentHistory = JSON.parse(reminderWithHistory.completionHistory)
           } catch {
-            historialActual = []
+            currentHistory = []
           }
-        } else if (Array.isArray(reminder.historialCompletados)) {
-          historialActual = reminder.historialCompletados as string[]
-        } else if (typeof reminder.historialCompletados === 'object') {
-          // Si es un objeto, intentar convertirlo a array
+        } else if (Array.isArray(reminderWithHistory.completionHistory)) {
+          currentHistory = reminderWithHistory.completionHistory as string[]
+        } else if (typeof reminderWithHistory.completionHistory === 'object') {
           try {
-            historialActual = Object.values(reminder.historialCompletados) as string[]
+            currentHistory = Object.values(reminderWithHistory.completionHistory) as string[]
           } catch {
-            historialActual = []
+            currentHistory = []
           }
         }
       }
       
-      // Agregar nueva fecha al historial
-      const nuevoHistorial = [...historialActual, fechaCompletado.toISOString()]
+      const newHistory = [...currentHistory, completedAt.toISOString()]
       
-      // Actualizar campos del historial - Prisma acepta objetos JavaScript para campos JSON
-      updateData.historialCompletados = nuevoHistorial
-      updateData.vecesCompletado = (reminder.vecesCompletado || 0) + 1
-      updateData.fechaCompletado = fechaCompletado
-      delete updateData.completado
-    } else if (data.completado !== undefined && data.completado === false) {
-      // Solo permitir desmarcar si está marcado actualmente
-      updateData.fechaCompletado = null
-      updateData.completado = false
+      updateData.completionHistory = newHistory
+      updateData.timesCompleted = (reminderWithHistory.timesCompleted || 0) + 1
+      updateData.completedAt = completedAt
+      delete updateData.completed
+    } else if (data.completed !== undefined && data.completed === false) {
+      updateData.completedAt = null
+      updateData.completed = false
     }
 
-    // Recalcular próxima notificación si cambian las notificaciones o frecuencia
-    if (data.notificacionesActivas !== undefined || data.frecuenciaRecordatorio) {
-      const notificacionesActivas = data.notificacionesActivas ?? reminder.notificacionesActivas
-      const frecuencia = data.frecuenciaRecordatorio ?? reminder.frecuenciaRecordatorio
+    if (data.notificationsEnabled !== undefined || data.reminderFrequency) {
+      const notificationsEnabled = data.notificationsEnabled ?? reminderWithHistory.notificationsEnabled
+      const frequency = data.reminderFrequency ?? reminderWithHistory.reminderFrequency
 
-      if (notificacionesActivas) {
-        const hoy = new Date()
-        let proximaNotificacion: Date | null = null
+      if (notificationsEnabled) {
+        const today = new Date()
+        let nextNotification: Date | null = null
 
-        if (frecuencia === 'DIARIO') {
-          proximaNotificacion = new Date(hoy)
-          proximaNotificacion.setDate(proximaNotificacion.getDate() + 1)
-        } else if (frecuencia === 'SEMANAL') {
-          proximaNotificacion = new Date(hoy)
-          proximaNotificacion.setDate(proximaNotificacion.getDate() + 7)
-        } else if (frecuencia === 'MENSUAL') {
-          proximaNotificacion = new Date(hoy)
-          proximaNotificacion.setMonth(proximaNotificacion.getMonth() + 1)
+        if (frequency === 'DAILY') {
+          nextNotification = new Date(today)
+          nextNotification.setDate(nextNotification.getDate() + 1)
+        } else if (frequency === 'WEEKLY') {
+          nextNotification = new Date(today)
+          nextNotification.setDate(nextNotification.getDate() + 7)
+        } else if (frequency === 'MONTHLY') {
+          nextNotification = new Date(today)
+          nextNotification.setMonth(nextNotification.getMonth() + 1)
         }
 
-        updateData.proximaNotificacion = proximaNotificacion
+        updateData.nextNotification = nextNotification
       } else {
-        updateData.proximaNotificacion = null
+        updateData.nextNotification = null
       }
     }
     
-    // Build update object explicitly for Prisma
     const prismaUpdateData: any = {}
     
-    // Copy valid fields
-    if (updateData.titulo !== undefined) prismaUpdateData.titulo = updateData.titulo
-    if (updateData.descripcion !== undefined) prismaUpdateData.descripcion = updateData.descripcion
-    if (updateData.fechaVencimiento !== undefined) prismaUpdateData.fechaVencimiento = updateData.fechaVencimiento
-    if (updateData.categoriaId !== undefined) prismaUpdateData.categoriaId = updateData.categoriaId
-    if (updateData.completado !== undefined) prismaUpdateData.completado = updateData.completado
-    if (updateData.fechaCompletado !== undefined) prismaUpdateData.fechaCompletado = updateData.fechaCompletado
-    if (updateData.historialCompletados !== undefined) prismaUpdateData.historialCompletados = updateData.historialCompletados
-    if (updateData.vecesCompletado !== undefined) prismaUpdateData.vecesCompletado = updateData.vecesCompletado
-    if (updateData.notificacionesActivas !== undefined) prismaUpdateData.notificacionesActivas = updateData.notificacionesActivas
-    if (updateData.frecuenciaRecordatorio !== undefined) prismaUpdateData.frecuenciaRecordatorio = updateData.frecuenciaRecordatorio
-    if (updateData.proximaNotificacion !== undefined) prismaUpdateData.proximaNotificacion = updateData.proximaNotificacion
+    if (updateData.title !== undefined) prismaUpdateData.title = updateData.title
+    if (updateData.description !== undefined) prismaUpdateData.description = updateData.description
+    if (updateData.dueDate !== undefined) prismaUpdateData.dueDate = updateData.dueDate
+    if (updateData.categoryId !== undefined) prismaUpdateData.categoryId = updateData.categoryId
+    if (updateData.completed !== undefined) prismaUpdateData.completed = updateData.completed
+    if (updateData.completedAt !== undefined) prismaUpdateData.completedAt = updateData.completedAt
+    if (updateData.completionHistory !== undefined) prismaUpdateData.completionHistory = updateData.completionHistory
+    if (updateData.timesCompleted !== undefined) prismaUpdateData.timesCompleted = updateData.timesCompleted
+    if (updateData.notificationsEnabled !== undefined) prismaUpdateData.notificationsEnabled = updateData.notificationsEnabled
+    if (updateData.reminderFrequency !== undefined) prismaUpdateData.reminderFrequency = updateData.reminderFrequency
+    if (updateData.nextNotification !== undefined) prismaUpdateData.nextNotification = updateData.nextNotification
     
-    const updated = await prisma.recordatorio.update({
+    const updated = await prisma.reminder.update({
       where: { id: params.id },
       data: prismaUpdateData as any,
-      include: { categoria: true },
+      include: { category: true },
     })
     
     const updatedReminder = updated as typeof updated & {
-      fechaCompletado?: Date | null
-      historialCompletados?: string[] | object | null
-      vecesCompletado?: number
+      completedAt?: Date | null
+      completionHistory?: string[] | object | null
+      timesCompleted?: number
     }
-
-    // NO crear el siguiente recordatorio recurrente inmediatamente
-    // El recordatorio permanecerá completado hasta su fecha de vencimiento
-    // El siguiente se creará automáticamente cuando se resetee al pasar la fecha de vencimiento
 
     return NextResponse.json(updated)
   } catch (error) {
@@ -195,15 +177,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const recordatorio = await prisma.recordatorio.findUnique({
+    const reminder = await prisma.reminder.findUnique({
       where: { id: params.id },
     })
 
-    if (!recordatorio || recordatorio.userId !== session.user.id) {
+    if (!reminder || reminder.userId !== session.user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    await prisma.recordatorio.delete({
+    await prisma.reminder.delete({
       where: { id: params.id },
     })
 
