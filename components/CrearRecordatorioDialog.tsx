@@ -8,18 +8,20 @@ interface CrearRecordatorioDialogProps {
   categorias: Categoria[]
   onClose: () => void
   onSuccess: () => void
+  initialCategoryId?: string
 }
 
 export default function CrearRecordatorioDialog({
   categorias,
   onClose,
   onSuccess,
+  initialCategoryId,
 }: CrearRecordatorioDialogProps) {
   const t = useI18n('es')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
-  const [categoryId, setCategoryId] = useState<string>('')
+  const [categoryId, setCategoryId] = useState<string>(initialCategoryId || '')
   const [notificationsActive, setNotificationsActive] = useState(true)
   const [reminderFrequency, setReminderFrequency] = useState('DIARIO')
   const [recurring, setRecurring] = useState(false)

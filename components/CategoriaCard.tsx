@@ -10,9 +10,10 @@ interface CategoriaCardProps {
   onClick?: () => void
   isSelected?: boolean
   onEdit?: (categoria: Categoria) => void
+  onAddReminder?: (categoria: Categoria) => void
 }
 
-export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected = false, onEdit }: CategoriaCardProps) {
+export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected = false, onEdit, onAddReminder }: CategoriaCardProps) {
   const t = useI18n('es')
   const [loading, setLoading] = useState(false)
 
@@ -101,6 +102,21 @@ export default function CategoriaCard({ categoria, onUpdate, onClick, isSelected
           
           {/* Action buttons */}
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+            {onAddReminder && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAddReminder(categoria)
+                }}
+                disabled={loading}
+                className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 disabled:opacity-50 flex-shrink-0"
+                title={t.categoryCard.addReminder}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
             {onEdit && (
               <button
                 onClick={(e) => {

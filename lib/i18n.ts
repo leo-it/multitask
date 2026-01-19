@@ -117,6 +117,7 @@ export const translations = {
       selected: '✓ Seleccionada',
       deleteConfirm: '¿Estás seguro de eliminar esta categoría? Los recordatorios no se eliminarán.',
       edit: 'Editar',
+      addReminder: 'Agregar recordatorio',
     },
     // Edit Category Dialog
     editCategory: {
@@ -295,6 +296,7 @@ export const translations = {
       selected: '✓ Selected',
       deleteConfirm: 'Are you sure you want to delete this category? Reminders will not be deleted.',
       edit: 'Edit',
+      addReminder: 'Add reminder',
     },
     // Edit Category Dialog
     editCategory: {

@@ -24,6 +24,7 @@ export default function DashboardClient() {
   const [editingCategory, setEditingCategory] = useState<Categoria | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [completionFilter, setCompletionFilter] = useState<'todos' | 'pendientes' | 'completados'>('pendientes')
+  const [reminderCategoryId, setReminderCategoryId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     loadData()
@@ -234,6 +235,10 @@ export default function DashboardClient() {
                 }}
                 isSelected={categoryFilter === categoria.id}
                 onEdit={setEditingCategory}
+                onAddReminder={(cat) => {
+                  setReminderCategoryId(cat.id)
+                  setShowCreateReminder(true)
+                }}
               />
             ))}
             {categories.length === 0 && (
@@ -337,8 +342,12 @@ export default function DashboardClient() {
       {showCreateReminder && (
         <CrearRecordatorioDialog
           categorias={categories}
-          onClose={() => setShowCreateReminder(false)}
+          onClose={() => {
+            setShowCreateReminder(false)
+            setReminderCategoryId(undefined)
+          }}
           onSuccess={loadData}
+          initialCategoryId={reminderCategoryId}
         />
       )}
 
