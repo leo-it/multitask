@@ -60,6 +60,12 @@ export default function EditReminderDialog({
 
     setLoading(true)
     try {
+      let dueDateISO: string | null = null
+      if (!recurring && dueDate) {
+        const date = new Date(dueDate)
+        dueDateISO = date.toISOString()
+      }
+
       const response = await fetch(`/api/recordatorios/${reminder.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -67,7 +73,7 @@ export default function EditReminderDialog({
         body: JSON.stringify({
           title,
           description: description || null,
-          dueDate: recurring ? null : dueDate || null,
+          dueDate: dueDateISO,
           categoryId: categoryId || null,
           notificationsEnabled: notificationsActive,
           reminderFrequency,

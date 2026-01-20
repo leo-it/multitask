@@ -9,6 +9,7 @@ import CreateReminderDialog from '@/components/CreateReminderDialog'
 import CreateCategoryDialog from '@/components/CreateCategoryDialog'
 import EditReminderDialog from '@/components/EditReminderDialog'
 import EditCategoryDialog from '@/components/EditCategoryDialog'
+import WeeklyCompletedView from '@/components/WeeklyCompletedView'
 import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
@@ -25,6 +26,8 @@ export default function DashboardClient() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [completionFilter, setCompletionFilter] = useState<'todos' | 'pendientes' | 'completados'>('pendientes')
   const [reminderCategoryId, setReminderCategoryId] = useState<string | undefined>(undefined)
+  const [activeTab, setActiveTab] = useState<'list' | 'weekly'>('list')
+  const [weeklyViewDate, setWeeklyViewDate] = useState(new Date())
 
   useEffect(() => {
     loadData()
@@ -89,11 +92,6 @@ export default function DashboardClient() {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     })
 
-  const pendingReminders = remindersArray.filter((r) => !r.completed)
-  const upcomingDueDates = pendingReminders
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-    .slice(0, 5)
-
   const handleLogout = async () => {
     await signOut({ redirect: false })
     router.push('/login')
@@ -141,36 +139,42 @@ export default function DashboardClient() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quick stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-600">{t.dashboard.total}</p>
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-lg">📋</span>
-              </div>
-            </div>
-            <p className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              {remindersArray.length}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">{t.dashboard.reminders}</p>
-          </div>
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-600">{t.dashboard.pending}</p>
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-lg">⏰</span>
-              </div>
-            </div>
-            <p className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">
-              {pendingReminders.length}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">{t.dashboard.toComplete}</p>
-          </div>
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 ${
+              activeTab === 'list'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.dashboard.reminders}
+          </button>
+          <button
+            onClick={() => setActiveTab('weekly')}
+            className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 ${
+              activeTab === 'weekly'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.dashboard.weeklyCompleted}
+          </button>
         </div>
 
-        {/* Filters */}
-        <div className="mb-8 flex flex-wrap gap-3">
+        {activeTab === 'weekly' ? (
+          <WeeklyCompletedView
+            reminders={reminders}
+            categories={categories}
+            selectedDate={weeklyViewDate}
+            onDateChange={setWeeklyViewDate}
+            onUpdate={loadData}
+          />
+        ) : (
+          <>
+            {/* Filters */}
+            <div className="mb-8 flex flex-wrap gap-3">
           <select
             value={categoryFilter || 'todas'}
             onChange={(e) => setCategoryFilter(e.target.value === 'todas' ? null : e.target.value)}
@@ -296,23 +300,7 @@ export default function DashboardClient() {
             )}
           </div>
         </div>
-
-        {/* Upcoming due dates */}
-        {upcomingDueDates.length > 0 && (
-          <div className="mt-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.dashboard.upcomingDueDates}</h2>
-            <div className="space-y-4">
-              {upcomingDueDates.map((reminder) => (
-                <ReminderCard
-                  key={reminder.id}
-                  reminder={reminder}
-                  categories={categories}
-                  onUpdate={loadData}
-                  onEdit={setEditingReminder}
-                />
-              ))}
-            </div>
-          </div>
+          </>
         )}
       </main>
 
