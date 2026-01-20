@@ -13,3 +13,8 @@
 - Remove debug statements before committing
 - Focus on clear, readable code structure
 - All database models, fields, and relationships must use English naming
+
+## Git Commits
+- Keep commit messages short and concise
+- Use clear, descriptive messages that explain what was changed
+- Avoid verbose or overly detailed commit messages

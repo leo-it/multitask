@@ -224,25 +224,28 @@ export default function DashboardClient() {
               {t.dashboard.newCategory}
             </button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {categories.map((category) => (
-              <CategoryCard
-                key={category.id}
-                category={category}
-                onUpdate={loadData}
-                onClick={() => {
-                  setCategoryFilter(categoryFilter === category.id ? null : category.id)
-                }}
-                isSelected={categoryFilter === category.id}
-                onEdit={setEditingCategory}
-                onAddReminder={(cat) => {
-                  setReminderCategoryId(cat.id)
-                  setShowCreateReminder(true)
-                }}
-              />
-            ))}
+          <div className="overflow-x-auto -mx-4 px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex gap-4 min-w-max pb-2">
+              {categories.map((category) => (
+                <div key={category.id} className="flex-shrink-0 w-[calc(50vw-1.5rem)] sm:w-[calc(25%-0.5rem)] md:w-[calc(25%-0.5rem)] lg:w-[calc(33.333%-0.67rem)]">
+                  <CategoryCard
+                    category={category}
+                    onUpdate={loadData}
+                    onClick={() => {
+                      setCategoryFilter(categoryFilter === category.id ? null : category.id)
+                    }}
+                    isSelected={categoryFilter === category.id}
+                    onEdit={setEditingCategory}
+                    onAddReminder={(cat) => {
+                      setReminderCategoryId(cat.id)
+                      setShowCreateReminder(true)
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
             {categories.length === 0 && (
-              <div className="col-span-full bg-white/60 backdrop-blur-sm rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
                 <div className="text-5xl mb-4">📁</div>
                 <p className="text-gray-600 font-medium mb-2">{t.dashboard.noCategories}</p>
                 <p className="text-sm text-gray-500 mb-4">{t.dashboard.createCategoryPrompt}</p>
