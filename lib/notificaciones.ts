@@ -14,17 +14,25 @@ export async function procesarNotificaciones() {
           },
         },
         {
-          dueDate: {
-            lte: now,
-          },
-          lastNotification: {
-            OR: [
-              null,
-              {
-                lt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+          AND: [
+            {
+              dueDate: {
+                lte: now,
               },
-            ],
-          },
+            },
+            {
+              OR: [
+                {
+                  lastNotification: null,
+                },
+                {
+                  lastNotification: {
+                    lt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+                  },
+                },
+              ],
+            },
+          ],
         },
       ],
     },

@@ -51,7 +51,7 @@ export async function PATCH(
 
     const isDirectHistoryUpdate = data.completionHistory !== undefined
     
-    if (isDirectHistoryUpdate) {
+    if (isDirectHistoryUpdate && data.completionHistory !== undefined) {
       updateData.completionHistory = data.completionHistory
       if (data.completedAt) {
         updateData.completedAt = new Date(data.completedAt)
