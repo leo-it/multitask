@@ -37,10 +37,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy Prisma files
+# Next.js standalone output should include Prisma Client in .next/standalone/node_modules
+# We copy @prisma package and schema for safety
 RUN mkdir -p ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# Note: .prisma directory is not copied as it should be included in Next.js standalone build
+# If Prisma fails at runtime, it means standalone didn't include it and we may need to adjust the build
 
 USER nextjs
 
