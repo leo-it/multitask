@@ -5,8 +5,16 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
 import { headers } from 'next/headers'
+import { logger } from './logger'
 
 const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
+
+if (!secret && process.env.NODE_ENV === 'production') {
+  logger.error('NEXTAUTH_SECRET is not set in production environment variables', undefined, {
+    action: 'auth_config_check',
+    environment: 'production',
+  })
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
