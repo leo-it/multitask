@@ -18,6 +18,9 @@ export const metadata: Metadata = {
     icon: '/favicon.ico',
     apple: '/icon-192x192.png',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export const viewport: Viewport = {
@@ -34,15 +37,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512x512.png" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Organizador" />
-        <meta name="mobile-web-app-capable" content="yes" />
-      </head>
       <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>
