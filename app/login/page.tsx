@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useI18n } from '@/hooks/useI18n'
+import InstallPWAButton from '@/components/InstallPWAButton'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -118,6 +119,8 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      <InstallPWAButton />
     </div>
   )
 }
