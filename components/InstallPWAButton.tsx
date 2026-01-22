@@ -8,6 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const log = (message: string, metadata?: Record<string, unknown>) => {
+  if (typeof window === 'undefined') return
   const timestamp = new Date().toISOString()
   const logMessage = `[${timestamp}] [PWA] ${message}`
   if (metadata) {
@@ -30,21 +31,23 @@ export default function InstallPWAButton() {
       return
     }
 
-    log('Initializing PWA install button check')
+    log('Initializing PWA install button check', {
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    })
 
     const checkIfInstalled = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches
       const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
       const isInStandaloneMode = (window.navigator as any).standalone === true
       const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      const userAgent = navigator.userAgent
 
       log('Checking installation status', {
         isStandalone,
         ios,
         isInStandaloneMode,
         mobile,
-        userAgent,
+        userAgent: navigator.userAgent,
       })
 
       setIsIOS(ios)
@@ -65,10 +68,13 @@ export default function InstallPWAButton() {
 
     log('App not installed, setting up install prompt listener')
 
+    let deferredPromptValue: BeforeInstallPromptEvent | null = null
+
     const handler = (e: Event) => {
       log('beforeinstallprompt event fired')
       e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      deferredPromptValue = e as BeforeInstallPromptEvent
+      setDeferredPrompt(deferredPromptValue)
       setShowButton(true)
       log('Button set to show after beforeinstallprompt event')
     }
@@ -78,18 +84,29 @@ export default function InstallPWAButton() {
 
     const timeout = setTimeout(() => {
       log('Timeout reached, checking if button should be shown')
-      if (!checkIfInstalled()) {
+      const currentlyInstalled = checkIfInstalled()
+      
+      if (!currentlyInstalled) {
         const iosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
         const androidDevice = /Android/i.test(navigator.userAgent)
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
         
-        log('Mobile device check', { iosDevice, androidDevice, isMobileDevice, hasDeferredPrompt: !!deferredPrompt })
+        log('Mobile device check after timeout', { 
+          iosDevice, 
+          androidDevice, 
+          isMobileDevice,
+          hasDeferredPrompt: !!deferredPromptValue,
+          userAgent: navigator.userAgent 
+        })
         
         if (iosDevice || androidDevice || isMobileDevice) {
           log('Mobile device detected, showing button')
           setShowButton(true)
+        } else if (deferredPromptValue) {
+          log('Desktop browser has deferred prompt, showing button')
+          setShowButton(true)
         } else {
-          log('Not a mobile device, not showing button automatically')
+          log('Not a mobile device and no deferred prompt, not showing button')
         }
       } else {
         log('App is installed, not showing button')
@@ -142,15 +159,35 @@ export default function InstallPWAButton() {
     }
   }
 
+  useEffect(() => {
+    log('Component render state', { 
+      isInstalled, 
+      showButton, 
+      isIOS, 
+      isMobile, 
+      hasDeferredPrompt: !!deferredPrompt,
+      shouldRender: !isInstalled && showButton
+    })
+  }, [isInstalled, showButton, isIOS, isMobile, deferredPrompt])
+
   if (isInstalled) {
+    log('Not rendering: app is already installed')
     return null
   }
 
   if (!showButton) {
+    log('Not rendering: showButton is false')
     return null
   }
 
   const shouldShowInstallButton = !isIOS && deferredPrompt !== null
+  
+  log('Rendering install button', { 
+    shouldShowInstallButton, 
+    isIOS, 
+    isMobile, 
+    hasDeferredPrompt: !!deferredPrompt 
+  })
 
   return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-auto z-50">

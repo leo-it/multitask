@@ -245,14 +245,36 @@ Si no completas un recordatorio después de su fecha de vencimiento, el sistema 
 
 La aplicación está lista para desplegarse usando servicios gratuitos:
 
+- **Vercel** (Recomendado): Plan gratuito para hosting + **Neon** para PostgreSQL
 - **Railway.app**: Plan gratuito con $5 de crédito mensual
 - **Render.com**: Plan gratuito (con limitaciones)
-- **Vercel**: Plan gratuito (con limitaciones de base de datos)
+
+### Base de Datos: Neon (Recomendado)
+
+**Neon** es una base de datos PostgreSQL serverless perfecta para Next.js y Vercel:
+
+- ✅ **Plan gratuito generoso**: 0.5 GB de almacenamiento, suficiente para empezar
+- ✅ **Serverless**: Se escala automáticamente
+- ✅ **Conexión rápida**: Optimizado para aplicaciones serverless
+- ✅ **Fácil integración**: Compatible con Prisma y Next.js
+- ✅ **Backups automáticos**: Incluidos en el plan gratuito
+
+**Pasos para configurar Neon:**
+
+1. **Crear cuenta en Neon**: Ve a [neon.tech](https://neon.tech) y crea una cuenta gratuita
+2. **Crear proyecto**: Crea un nuevo proyecto PostgreSQL
+3. **Obtener connection string**: Copia la connection string desde el dashboard de Neon
+4. **Configurar en Vercel**: Agrega `DATABASE_URL` en las variables de entorno de Vercel
+
+**Ver datos en Neon:**
+- Accede al dashboard de Neon → SQL Editor
+- O usa `psql` con la connection string proporcionada
+- O usa Prisma Studio: `pnpm db:studio` (localmente con la connection string de Neon)
 
 ### Variables de Entorno Necesarias
 
 ```env
-DATABASE_URL=postgresql://...
+DATABASE_URL=postgresql://... (Connection string de Neon)
 NEXTAUTH_URL=https://tu-dominio.com
 NEXTAUTH_SECRET=tu-secret-seguro
 NODE_ENV=production
