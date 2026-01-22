@@ -1,66 +1,156 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useI18n } from '@/hooks/useI18n'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+const log = (message: string, metadata?: Record<string, unknown>) => {
+  const timestamp = new Date().toISOString()
+  const logMessage = `[${timestamp}] [PWA] ${message}`
+  if (metadata) {
+    console.log(logMessage, metadata)
+  } else {
+    console.log(logMessage)
+  }
+}
+
 export default function InstallPWAButton() {
-  const t = useI18n('es')
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
   const [showButton, setShowButton] = useState(false)
+  const [isIOS, setIsIOS] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    const isInStandaloneMode = (window.navigator as any).standalone === true
-
-    if (isStandalone || (isIOS && isInStandaloneMode)) {
-      setIsInstalled(true)
+    if (typeof window === 'undefined') {
+      log('Window is undefined, skipping PWA check')
       return
     }
 
+    log('Initializing PWA install button check')
+
+    const checkIfInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      const isInStandaloneMode = (window.navigator as any).standalone === true
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      const userAgent = navigator.userAgent
+
+      log('Checking installation status', {
+        isStandalone,
+        ios,
+        isInStandaloneMode,
+        mobile,
+        userAgent,
+      })
+
+      setIsIOS(ios)
+      setIsMobile(mobile)
+
+      if (isStandalone || (ios && isInStandaloneMode)) {
+        log('App is already installed', { isStandalone, ios, isInStandaloneMode })
+        setIsInstalled(true)
+        return true
+      }
+      return false
+    }
+
+    if (checkIfInstalled()) {
+      log('App already installed, not showing button')
+      return
+    }
+
+    log('App not installed, setting up install prompt listener')
+
     const handler = (e: Event) => {
+      log('beforeinstallprompt event fired')
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       setShowButton(true)
+      log('Button set to show after beforeinstallprompt event')
     }
 
     window.addEventListener('beforeinstallprompt', handler)
+    log('beforeinstallprompt listener added')
+
+    const timeout = setTimeout(() => {
+      log('Timeout reached, checking if button should be shown')
+      if (!checkIfInstalled()) {
+        const iosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        const androidDevice = /Android/i.test(navigator.userAgent)
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        
+        log('Mobile device check', { iosDevice, androidDevice, isMobileDevice, hasDeferredPrompt: !!deferredPrompt })
+        
+        if (iosDevice || androidDevice || isMobileDevice) {
+          log('Mobile device detected, showing button')
+          setShowButton(true)
+        } else {
+          log('Not a mobile device, not showing button automatically')
+        }
+      } else {
+        log('App is installed, not showing button')
+      }
+    }, 2000)
 
     return () => {
+      log('Cleaning up PWA install button listeners')
       window.removeEventListener('beforeinstallprompt', handler)
+      clearTimeout(timeout)
     }
   }, [])
 
+  useEffect(() => {
+    if (showButton) {
+      log('Button visibility changed', { showButton, isInstalled, isIOS, isMobile, hasDeferredPrompt: !!deferredPrompt })
+    }
+  }, [showButton, isInstalled, isIOS, isMobile, deferredPrompt])
+
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        alert('Para instalar en iOS: Toca el botón de compartir (□↑) y selecciona "Agregar a pantalla de inicio"')
-      }
+    log('Install button clicked', { isIOS, hasDeferredPrompt: !!deferredPrompt })
+
+    if (isIOS) {
+      log('iOS device, showing manual instructions')
       return
     }
 
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-
-    if (outcome === 'accepted') {
-      setShowButton(false)
-      setIsInstalled(true)
+    if (!deferredPrompt) {
+      log('No deferred prompt available')
+      return
     }
 
-    setDeferredPrompt(null)
+    try {
+      log('Calling deferredPrompt.prompt()')
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      log('User choice received', { outcome })
+
+      if (outcome === 'accepted') {
+        log('User accepted installation')
+        setShowButton(false)
+        setIsInstalled(true)
+      } else {
+        log('User dismissed installation')
+      }
+    } catch (error) {
+      log('Error during installation', { error: error instanceof Error ? error.message : String(error) })
+    } finally {
+      setDeferredPrompt(null)
+    }
   }
 
-  if (isInstalled || !showButton) {
+  if (isInstalled) {
     return null
   }
+
+  if (!showButton) {
+    return null
+  }
+
+  const shouldShowInstallButton = !isIOS && deferredPrompt !== null
 
   return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-auto z-50">
@@ -73,18 +163,25 @@ export default function InstallPWAButton() {
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm md:text-base">Instalar App</p>
           <p className="text-xs md:text-sm text-white/90 opacity-90">
-            Agrega Organizador a tu pantalla de inicio
+            {isIOS 
+              ? 'Toca el botón de compartir (□↑) y selecciona "Agregar a pantalla de inicio"'
+              : isMobile
+              ? 'Agrega Organizador a tu pantalla de inicio para acceso rápido'
+              : 'Instala esta app en tu dispositivo para una mejor experiencia'
+            }
           </p>
         </div>
-        <button
-          onClick={handleInstallClick}
-          className="flex-shrink-0 px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-white/90 transition-colors text-sm whitespace-nowrap"
-        >
-          Instalar
-        </button>
+        {shouldShowInstallButton && (
+          <button
+            onClick={handleInstallClick}
+            className="flex-shrink-0 px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-white/90 transition-colors text-sm whitespace-nowrap"
+          >
+            Instalar
+          </button>
+        )}
         <button
           onClick={() => setShowButton(false)}
-          className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
+          className="flex-shrink-0 text-white/80 hover:text-white transition-colors text-xl leading-none"
           aria-label="Cerrar"
         >
           ✕
