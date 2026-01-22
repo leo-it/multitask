@@ -13,7 +13,6 @@ export default async function Home() {
     
     redirect('/login')
   } catch (error) {
-    console.error('Error in home page:', error)
     redirect('/login')
   }
 }

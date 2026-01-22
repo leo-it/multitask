@@ -14,7 +14,6 @@ export default async function DashboardPage() {
 
     return <DashboardClient />
   } catch (error) {
-    console.error('Error in dashboard page:', error)
     redirect('/login')
   }
 }
