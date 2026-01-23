@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getServerSession } from '@/lib/auth'
+import { getServerSession } from '@/lib/firebase-auth'
 import DashboardClient from './DashboardClient'
 import { logger } from '@/lib/logger'
 

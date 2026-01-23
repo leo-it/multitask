@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getServerSession } from '@/lib/auth'
+import { getServerSession } from '@/lib/firebase-auth'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'

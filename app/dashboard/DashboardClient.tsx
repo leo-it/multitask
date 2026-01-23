@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import ReminderCard from '@/components/ReminderCard'
 import CategoryCard from '@/components/CategoryCard'
@@ -93,8 +92,16 @@ export default function DashboardClient() {
     })
 
   const handleLogout = async () => {
-    await signOut({ redirect: false })
-    router.push('/login')
+    try {
+      await fetch('/api/auth/firebase/logout', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      router.push('/login')
+    }
   }
 
   if (loading) {
