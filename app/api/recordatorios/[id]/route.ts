@@ -6,7 +6,7 @@ import { z } from 'zod'
 const updateSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).optional().nullable(),
-  dueDate: z.string().datetime().optional(),
+  dueDate: z.string().datetime().nullable().optional(),
   categoryId: z.string().optional().nullable(),
   completed: z.boolean().optional(),
   notificationsEnabled: z.boolean().optional(),
@@ -45,8 +45,12 @@ export async function PATCH(
 
     const updateData: any = { ...data }
 
-    if (data.dueDate) {
-      updateData.dueDate = new Date(data.dueDate)
+    if (data.dueDate !== undefined) {
+      if (data.dueDate === null) {
+        updateData.dueDate = null
+      } else {
+        updateData.dueDate = new Date(data.dueDate)
+      }
     }
 
     const isDirectHistoryUpdate = data.completionHistory !== undefined
@@ -124,7 +128,7 @@ export async function PATCH(
     
     if (updateData.title !== undefined) prismaUpdateData.title = updateData.title
     if (updateData.description !== undefined) prismaUpdateData.description = updateData.description
-    if (updateData.dueDate !== undefined) prismaUpdateData.dueDate = updateData.dueDate
+    if (updateData.dueDate !== undefined && updateData.dueDate !== null) prismaUpdateData.dueDate = updateData.dueDate
     if (updateData.categoryId !== undefined) prismaUpdateData.categoryId = updateData.categoryId
     if (updateData.completed !== undefined) prismaUpdateData.completed = updateData.completed
     if (updateData.completedAt !== undefined) prismaUpdateData.completedAt = updateData.completedAt
