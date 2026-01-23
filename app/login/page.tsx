@@ -66,35 +66,50 @@ export default function LoginPage() {
       const firebaseAuth = getFirebaseAuthInstance()
       
       if (!firebaseAuth) {
-        setError('Firebase no está configurado. Por favor configura las variables de entorno NEXT_PUBLIC_FIREBASE_* en tu archivo .env')
+        setError('Firebase no está configurado. Por favor configura las variables de entorno NEXT_PUBLIC_FIREBASE_* en Vercel.')
         setGoogleLoading(false)
         return
       }
 
       const provider = new GoogleAuthProvider()
-      const userCredential = await signInWithPopup(firebaseAuth, provider)
-      const idToken = await userCredential.user.getIdToken()
+      
+      // Intentar con popup primero
+      try {
+        const userCredential = await signInWithPopup(firebaseAuth, provider)
+        const idToken = await userCredential.user.getIdToken()
 
-      const response = await fetch('/api/auth/firebase/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      })
+        const response = await fetch('/api/auth/firebase/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (!response.ok) {
-        setError(data.error || 'Error al iniciar sesión con Google')
-        return
+        if (!response.ok) {
+          setError(data.error || 'Error al iniciar sesión con Google')
+          return
+        }
+
+        router.push('/dashboard')
+        router.refresh()
+      } catch (popupError: any) {
+        // Si el popup falla, mostrar el error específico
+        if (popupError.code === 'auth/popup-blocked') {
+          setError('El navegador bloqueó la ventana emergente. Por favor permite popups para este sitio e intenta nuevamente.')
+        } else if (popupError.code === 'auth/popup-closed-by-user') {
+          setError('')
+        } else if (popupError.code === 'auth/unauthorized-domain') {
+          setError('Este dominio no está autorizado. Verifica que multitask-seven.vercel.app esté en los dominios autorizados de Firebase.')
+        } else {
+          setError(getFirebaseErrorMessage(popupError))
+        }
+        throw popupError
       }
-
-      router.push('/dashboard')
-      router.refresh()
     } catch (err: any) {
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError('')
-      } else {
-        setError(getFirebaseErrorMessage(err))
+      // Solo mostrar error si no es un cierre intencional del popup
+      if (err.code !== 'auth/popup-closed-by-user') {
+        console.error('Error en Google Sign In:', err)
       }
     } finally {
       setGoogleLoading(false)
