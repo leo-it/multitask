@@ -9,6 +9,7 @@ import CreateCategoryDialog from '@/components/CreateCategoryDialog'
 import EditReminderDialog from '@/components/EditReminderDialog'
 import EditCategoryDialog from '@/components/EditCategoryDialog'
 import WeeklyCompletedView from '@/components/WeeklyCompletedView'
+import LoadingSpinner from '@/components/LoadingSpinner'
 import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 
@@ -108,11 +109,7 @@ export default function DashboardClient() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary-200 border-t-primary-600 mx-auto"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary-400 animate-spin" style={{ animationDuration: '0.75s' }}></div>
-          </div>
-          <p className="mt-6 text-gray-600 font-medium">{t.dashboard.loadingTasks}</p>
+          <LoadingSpinner size="lg" text={t.dashboard.loadingTasks} />
         </div>
       </div>
     )
