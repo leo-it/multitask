@@ -12,6 +12,7 @@ import WeeklyCompletedView from '@/components/WeeklyCompletedView'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
+import Modal from '@/components/Modal'
 
 export default function DashboardClient() {
   const router = useRouter()
@@ -28,6 +29,89 @@ export default function DashboardClient() {
   const [reminderCategoryId, setReminderCategoryId] = useState<string | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<'list' | 'weekly'>('list')
   const [weeklyViewDate, setWeeklyViewDate] = useState(new Date())
+  const [showCustom, setShowCustom] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+
+  const onDateChange = (date: Date) => {
+    if(date) {
+      setSelectedDate(date)
+      setWeeklyViewDate(date)
+      setShowCustom(true)
+    }
+  }
+
+  const addCompletedReminders = async (reminders: Reminder[]) => {
+    if (!selectedDate) {
+      console.error('No hay fecha seleccionada')
+      return
+    }
+
+    const selectedDateTime = new Date(selectedDate)
+    selectedDateTime.setHours(12, 0, 0, 0)
+    const selectedDateISO = selectedDateTime.toISOString()
+
+    const updatePromises = reminders
+      .filter((reminder) => reminder.completed)
+      .map(async (reminder) => {
+        let currentHistory: string[] = []
+        
+        if (reminder.completionHistory) {
+          if (typeof reminder.completionHistory === 'string') {
+            try {
+              currentHistory = JSON.parse(reminder.completionHistory)
+            } catch {
+              currentHistory = []
+            }
+          } else if (Array.isArray(reminder.completionHistory)) {
+            currentHistory = reminder.completionHistory as string[]
+          } else if (typeof reminder.completionHistory === 'object') {
+            try {
+              currentHistory = Object.values(reminder.completionHistory) as string[]
+            } catch {
+              currentHistory = []
+            }
+          }
+        }
+
+        if (currentHistory.includes(selectedDateISO)) {
+          return Promise.resolve()
+        }
+
+        const newHistory = [...currentHistory, selectedDateISO].sort()
+
+        try {
+          const response = await fetch(`/api/recordatorios/${reminder.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              completionHistory: newHistory,
+              timesCompleted: newHistory.length,
+              completedAt: newHistory[newHistory.length - 1],
+            }),
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            console.log('reminder actualizado:', data)
+            return data
+          } else {
+            throw new Error('Error en la respuesta')
+          }
+        } catch (error) {
+          console.error('Error al actualizar el reminder:', error)
+          throw error
+        }
+      })
+
+    try {
+      await Promise.all(updatePromises)
+      loadData()
+      setShowCustom(false)
+    } catch (error) {
+      console.error('Error al actualizar los reminders:', error)
+    }
+  }
 
   useEffect(() => {
     loadData()
@@ -172,7 +256,7 @@ export default function DashboardClient() {
             reminders={reminders}
             categories={categories}
             selectedDate={weeklyViewDate}
-            onDateChange={setWeeklyViewDate}
+            onDateChange={onDateChange}
             onUpdate={loadData}
           />
         ) : (
@@ -365,6 +449,92 @@ export default function DashboardClient() {
           onSuccess={loadData}
         />
       )}
+
+ {showCustom && selectedDate && ( 
+  <Modal
+  isOpen={showCustom}
+  onClose={() => {
+    setShowCustom(false)
+    setReminders(reminders.map(r => ({ ...r, completed: false })))
+  }}
+  header={
+    <div className="flex items-center gap-2">
+      <span>📅</span>
+      <h2>Día seleccionado: {selectedDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
+    </div>
+  }
+  footer={
+    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <button 
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          addCompletedReminders(reminders)
+        }}
+        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+      >
+        Guardar
+      </button>
+      <button 
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setShowCustom(false)
+          setReminders(reminders.map(r => ({ ...r, completed: false })))
+        }}
+        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+      >
+        Cancelar
+      </button>
+    </div>
+  }
+  maxWidth="lg"
+>
+  <div className="space-y-3">
+    {reminders.length === 0 ? (
+      <p className="text-gray-500 text-center py-4">No hay recordatorios disponibles</p>
+    ) : (
+      reminders.map((reminder) => {
+        let currentHistory: string[] = []
+        if (reminder.completionHistory) {
+          if (typeof reminder.completionHistory === 'string') {
+            try {
+              currentHistory = JSON.parse(reminder.completionHistory)
+            } catch {
+              currentHistory = []
+            }
+          } else if (Array.isArray(reminder.completionHistory)) {
+            currentHistory = reminder.completionHistory as string[]
+          }
+        }
+        
+        const selectedDateISO = new Date(selectedDate).setHours(12, 0, 0, 0)
+        const dateStr = new Date(selectedDateISO).toISOString().split('T')[0]
+        const isAlreadyCompleted = currentHistory.some(h => h.split('T')[0] === dateStr)
+
+        return (
+          <div key={reminder.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
+            <input 
+              type="checkbox" 
+              checked={reminder.completed || false} 
+              onChange={() => {
+                setReminders(reminders.map((r) => r.id === reminder.id ? { ...r, completed: !r.completed } : r))
+              }}
+              className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
+            />
+            <label className="flex-1 cursor-pointer">
+              <div className="font-medium text-gray-900">{reminder.title}</div>
+              {isAlreadyCompleted && (
+                <div className="text-xs text-green-600 mt-1">✓ Ya completado en este día</div>
+              )}
+            </label>
+          </div>
+        )
+      })
+    )}
+  </div>
+</Modal>
+)}
     </div>
   )
 }

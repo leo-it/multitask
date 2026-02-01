@@ -269,13 +269,13 @@ export default function ReminderCard({ reminder, categories, onUpdate, onEdit }:
                       : 'bg-blue-100 text-blue-700'
                   }`}
                 >
-                  {isExpired
+                  {/* {isExpired
                     ? `⚠️ ${t.reminderCard.expiredDaysAgo} ${Math.abs(daysRemaining)} ${t.reminderCard.days}`
                     : daysRemaining === 0
                     ? `⏰ ${t.reminderCard.dueToday}`
                     : daysRemaining === 1
                     ? `⏰ ${t.reminderCard.dueTomorrow}`
-                    : `${daysRemaining} ${t.reminderCard.daysRemaining}`}
+                    : `${daysRemaining} ${t.reminderCard.daysRemaining}`} */}
                 </span>
               )}
             </div>

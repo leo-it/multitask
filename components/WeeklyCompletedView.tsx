@@ -282,24 +282,40 @@ export default function WeeklyCompletedView({
         {dias.map((dia) => (
           <div
             key={dia.toISOString()}
-            onClick={() => onDateChange?.(dia)}
-            className={`p-4 text-center border-r last:border-r-0 cursor-pointer hover:bg-gray-50 transition-colors ${
+            className={`p-4 text-center border-r last:border-r-0 ${
               isSameDay(dia, new Date())
-                ? 'bg-primary-50 font-semibold'
+                ? 'bg-primary-50'
                 : 'bg-gray-50'
             }`}
           >
-            <div className="text-sm text-gray-600">
-              {format(dia, 'EEE', { locale: es })}
-            </div>
-            <div className="text-lg mt-1 font-semibold text-gray-400">
-              {format(dia, 'd')}
-            </div>
-            {!mismoMes && (
-              <div className="text-xs text-gray-500 mt-1">
-                {format(dia, 'MMM', { locale: es })}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex-1">
+                <div className="text-sm text-gray-600">
+                  {format(dia, 'EEE', { locale: es })}
+                </div>
+                <div className={`text-lg mt-1 font-semibold ${
+                  isSameDay(dia, new Date())
+                    ? 'text-primary-600'
+                    : 'text-gray-400'
+                }`}>
+                  {format(dia, 'd')}
+                </div>
+                {!mismoMes && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {format(dia, 'MMM', { locale: es })}
+                  </div>
+                )}
               </div>
-            )}
+              <button
+                onClick={() => onDateChange?.(dia)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm hover:shadow-md group"
+                title="Agregar tarea completada"
+              >
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -312,8 +328,19 @@ export default function WeeklyCompletedView({
           return (
             <div
               key={dia.toISOString()}
-              className="border-r last:border-r-0 p-2 min-h-[400px]"
+              className="border-r last:border-r-0 p-2 min-h-[400px] relative group"
             >
+              {itemsDelDia.length === 0 && (
+                <button
+                  onClick={() => onDateChange?.(dia)}
+                  className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50/50 transition-all rounded-lg border-2 border-dashed border-transparent hover:border-primary-200"
+                >
+                  <svg className="w-8 h-8 mb-2 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="text-sm opacity-0 group-hover:opacity-100 transition-opacity">Agregar tarea</span>
+                </button>
+              )}
               <div className="space-y-2">
                 {itemsDelDia.map((item, itemIndex) => {
                   const category = getCategory(item.reminder)
@@ -420,22 +447,47 @@ export default function WeeklyCompletedView({
                 key={dia.toISOString()}
                 className="border-r last:border-r-0"
               >
-                <div
-                  onClick={() => onDateChange?.(dia)}
-                  className={`p-3 text-center border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                    isSameDay(dia, new Date())
-                      ? 'bg-primary-50 font-semibold'
-                      : 'bg-gray-50'
-                  }`}
-                >
-                  <div className="text-sm text-gray-600">
-                    {format(dia, 'EEE', { locale: es })}
-                  </div>
-                  <div className="text-lg mt-1 font-semibold text-gray-400">
-                    {format(dia, 'd')}
+                <div className={`p-3 border-b ${
+                  isSameDay(dia, new Date())
+                    ? 'bg-primary-50'
+                    : 'bg-gray-50'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 text-center">
+                      <div className="text-sm text-gray-600">
+                        {format(dia, 'EEE', { locale: es })}
+                      </div>
+                      <div className={`text-lg mt-1 font-semibold ${
+                        isSameDay(dia, new Date())
+                          ? 'text-primary-600'
+                          : 'text-gray-400'
+                      }`}>
+                        {format(dia, 'd')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onDateChange?.(dia)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm hover:shadow-md flex-shrink-0"
+                      title="Agregar tarea completada"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-                <div className="p-2 min-h-[200px]">
+                <div className="p-2 min-h-[200px] relative group">
+                  {itemsDelDia.length === 0 && (
+                    <button
+                      onClick={() => onDateChange?.(dia)}
+                      className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50/50 transition-all rounded-lg border-2 border-dashed border-transparent hover:border-primary-200 text-xs"
+                    >
+                      <svg className="w-6 h-6 mb-1 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity">Agregar</span>
+                    </button>
+                  )}
                   <div className="space-y-2">
                     {itemsDelDia.map((item, itemIndex) => {
                       const category = getCategory(item.reminder)
@@ -540,22 +592,47 @@ export default function WeeklyCompletedView({
                 key={dia.toISOString()}
                 className="border-r last:border-r-0"
               >
-                <div
-                  onClick={() => onDateChange?.(dia)}
-                  className={`p-3 text-center border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                    isSameDay(dia, new Date())
-                      ? 'bg-primary-50 font-semibold'
-                      : 'bg-gray-50'
-                  }`}
-                >
-                  <div className="text-sm text-gray-600">
-                    {format(dia, 'EEE', { locale: es })}
-                  </div>
-                  <div className="text-lg mt-1 font-semibold text-gray-400">
-                    {format(dia, 'd')}
+                <div className={`p-3 border-b ${
+                  isSameDay(dia, new Date())
+                    ? 'bg-primary-50'
+                    : 'bg-gray-50'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 text-center">
+                      <div className="text-sm text-gray-600">
+                        {format(dia, 'EEE', { locale: es })}
+                      </div>
+                      <div className={`text-lg mt-1 font-semibold ${
+                        isSameDay(dia, new Date())
+                          ? 'text-primary-600'
+                          : 'text-gray-400'
+                      }`}>
+                        {format(dia, 'd')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onDateChange?.(dia)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm hover:shadow-md flex-shrink-0"
+                      title="Agregar tarea completada"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-                <div className="p-2 min-h-[200px]">
+                <div className="p-2 min-h-[200px] relative group">
+                  {itemsDelDia.length === 0 && (
+                    <button
+                      onClick={() => onDateChange?.(dia)}
+                      className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50/50 transition-all rounded-lg border-2 border-dashed border-transparent hover:border-primary-200 text-xs"
+                    >
+                      <svg className="w-6 h-6 mb-1 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity">Agregar</span>
+                    </button>
+                  )}
                   <div className="space-y-2">
                     {itemsDelDia.map((item, itemIndex) => {
                       const category = getCategory(item.reminder)
@@ -660,22 +737,47 @@ export default function WeeklyCompletedView({
                 key={dia.toISOString()}
                 className="border-r last:border-r-0"
               >
-                <div
-                  onClick={() => onDateChange?.(dia)}
-                  className={`p-3 text-center border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                    isSameDay(dia, new Date())
-                      ? 'bg-primary-50 font-semibold'
-                      : 'bg-gray-50'
-                  }`}
-                >
-                  <div className="text-sm text-gray-600">
-                    {format(dia, 'EEE', { locale: es })}
-                  </div>
-                  <div className="text-lg mt-1 font-semibold text-gray-400">
-                    {format(dia, 'd')}
+                <div className={`p-3 border-b ${
+                  isSameDay(dia, new Date())
+                    ? 'bg-primary-50'
+                    : 'bg-gray-50'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 text-center">
+                      <div className="text-sm text-gray-600">
+                        {format(dia, 'EEE', { locale: es })}
+                      </div>
+                      <div className={`text-lg mt-1 font-semibold ${
+                        isSameDay(dia, new Date())
+                          ? 'text-primary-600'
+                          : 'text-gray-400'
+                      }`}>
+                        {format(dia, 'd')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => onDateChange?.(dia)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm hover:shadow-md flex-shrink-0"
+                      title="Agregar tarea completada"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-                <div className="p-2 min-h-[200px]">
+                <div className="p-2 min-h-[200px] relative group">
+                  {itemsDelDia.length === 0 && (
+                    <button
+                      onClick={() => onDateChange?.(dia)}
+                      className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50/50 transition-all rounded-lg border-2 border-dashed border-transparent hover:border-primary-200 text-xs"
+                    >
+                      <svg className="w-6 h-6 mb-1 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity">Agregar</span>
+                    </button>
+                  )}
                   <div className="space-y-2">
                     {itemsDelDia.map((item, itemIndex) => {
                       const category = getCategory(item.reminder)
