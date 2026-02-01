@@ -117,6 +117,33 @@ export default function DashboardClient() {
     loadData()
   }, [])
 
+  useEffect(() => {
+    let lastBackPress = 0
+    const DOUBLE_BACK_PRESS_DELAY = 2000
+
+    window.history.pushState(null, '', window.location.href)
+
+    const handlePopState = () => {
+      const now = Date.now()
+      const timeSinceLastPress = now - lastBackPress
+
+      if (timeSinceLastPress < DOUBLE_BACK_PRESS_DELAY) {
+        lastBackPress = 0
+        return
+      }
+
+      lastBackPress = now
+      window.history.pushState(null, '', window.location.href)
+      router.push('/')
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [router])
+
   const loadData = async () => {
     try {
       const [remindersRes, categoriesRes] = await Promise.all([
