@@ -18,15 +18,15 @@ const icons = CATEGORY_ICONS
 export default function EditCategoryDialog({ category, onClose, onSuccess }: EditCategoryDialogProps) {
   const t = useI18n('es')
   const [name, setName] = useState(category.name)
-  const [color, setColor] = useState(category.color)
-  const [icon, setIcon] = useState(category.icon || icons[0])
+  const [color, setColor] = useState<typeof CATEGORY_COLORS[number]>(category.color as typeof CATEGORY_COLORS[number])
+  const [icon, setIcon] = useState<typeof CATEGORY_ICONS[number] | null>((category.icon as typeof CATEGORY_ICONS[number]) || icons[0])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     setName(category.name)
-    setColor(category.color)
-    setIcon(category.icon || icons[0])
+    setColor(category.color as typeof CATEGORY_COLORS[number])
+    setIcon((category.icon as typeof CATEGORY_ICONS[number]) || icons[0])
   }, [category])
 
   const handleSubmit = async (e: React.FormEvent) => {

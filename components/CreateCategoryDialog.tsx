@@ -16,8 +16,8 @@ const icons = CATEGORY_ICONS
 export default function CreateCategoryDialog({ onClose, onSuccess }: CreateCategoryDialogProps) {
   const t = useI18n('es')
   const [name, setName] = useState('')
-  const [color, setColor] = useState(colors[0])
-  const [icon, setIcon] = useState(icons[0])
+  const [color, setColor] = useState<typeof CATEGORY_COLORS[number]>(colors[0])
+  const [icon, setIcon] = useState<typeof CATEGORY_ICONS[number]>(icons[0])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -112,7 +112,7 @@ export default function CreateCategoryDialog({ onClose, onSuccess }: CreateCateg
                   <button
                     key={ico}
                     type="button"
-                    onClick={() => setIcon(ico)}
+                    onClick={() => setIcon(icon)}
                     className={`w-14 h-14 text-2xl rounded-xl border-2 transition-all duration-200 hover:scale-110 ${
                       icon === ico
                         ? 'border-primary-500 bg-primary-50 shadow-lg scale-110'
