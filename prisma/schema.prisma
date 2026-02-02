@@ -103,6 +103,7 @@ model Reminder {
   nextNotification     DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+  colorPostit         String?   @default("#3b82f6")
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category  Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)

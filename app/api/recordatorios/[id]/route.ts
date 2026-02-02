@@ -14,6 +14,7 @@ const updateSchema = z.object({
   completionHistory: z.array(z.string()).optional(),
   timesCompleted: z.number().int().min(0).optional(),
   completedAt: z.string().datetime().nullable().optional(),
+  colorPostit: z.string().optional(),
 })
 
 export async function PATCH(
@@ -38,6 +39,7 @@ export async function PATCH(
     const reminderWithHistory = reminder as typeof reminder & {
       completionHistory?: string[] | object | null
       timesCompleted?: number
+      colorPostit?: string
     }
 
     const body = await request.json()
@@ -137,6 +139,7 @@ export async function PATCH(
     if (updateData.notificationsEnabled !== undefined) prismaUpdateData.notificationsEnabled = updateData.notificationsEnabled
     if (updateData.reminderFrequency !== undefined) prismaUpdateData.reminderFrequency = updateData.reminderFrequency
     if (updateData.nextNotification !== undefined) prismaUpdateData.nextNotification = updateData.nextNotification
+    if (updateData.colorPostit !== undefined) prismaUpdateData.colorPostit = updateData.colorPostit
     
     const updated = await prisma.reminder.update({
       where: { id: params.id },

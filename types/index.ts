@@ -28,5 +28,6 @@ export interface Reminder {
   nextNotification?: string | null
   createdAt: string
   updatedAt: string
+  colorPostit?: string | null
   category?: Category | null
 }

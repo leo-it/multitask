@@ -5,12 +5,14 @@ import { format, startOfWeek, addDays, isSameDay, parseISO, subWeeks, addWeeks }
 import { es } from 'date-fns/locale'
 import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
+import { CATEGORY_COLORS } from '@/lib/constants'
 
 interface WeeklyCompletedViewProps {
   reminders: Reminder[]
   categories: Category[]
   selectedDate: Date
   onDateChange?: (date: Date) => void
+  onWeekChange?: (date: Date) => void
   onUpdate?: () => void
 }
 
@@ -25,12 +27,17 @@ export default function WeeklyCompletedView({
   categories,
   selectedDate,
   onDateChange,
+  onWeekChange,
   onUpdate,
 }: WeeklyCompletedViewProps) {
   const t = useI18n('es')
   const [editingItem, setEditingItem] = useState<{ reminderId: string; completedAt: string } | null>(null)
   const [editingDate, setEditingDate] = useState('')
   const [editingTime, setEditingTime] = useState('')
+  const [colorPostit, setColorPostit] = useState('')
+
+  const availableColors = CATEGORY_COLORS
+
 
   const fechaLocal = new Date(selectedDate)
   fechaLocal.setHours(0, 0, 0, 0)
@@ -109,16 +116,16 @@ export default function WeeklyCompletedView({
 
   const handlePreviousWeek = () => {
     const nuevaFecha = subWeeks(selectedDate, 1)
-    onDateChange?.(nuevaFecha)
+    onWeekChange?.(nuevaFecha)
   }
 
   const handleNextWeek = () => {
     const nuevaFecha = addWeeks(selectedDate, 1)
-    onDateChange?.(nuevaFecha)
+    onWeekChange?.(nuevaFecha)
   }
 
   const handleToday = () => {
-    onDateChange?.(new Date())
+    onWeekChange?.(new Date())
   }
 
   const isCurrentWeek = () => {
@@ -172,12 +179,82 @@ export default function WeeklyCompletedView({
     }
   }
 
-  const startEditing = (reminderId: string, completedAt: string) => {
+  const getReminderColor = (reminder: Reminder, category?: Category | null): string => {
+    return reminder.colorPostit || category?.color || CATEGORY_COLORS[0]
+  }
+
+  const getReminderBgColor = (reminder: Reminder, category?: Category | null): string => {
+    const color = getReminderColor(reminder, category)
+    const hex = color.replace('#', '')
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+    return `rgba(${r}, ${g}, ${b}, 0.1)`
+  }
+
+  const startEditing = (reminderId: string, completedAt: string, color: string) => {
     const completedDate = new Date(completedAt)
+    const reminder = reminders.find(r => r.id === reminderId)
+    const category = reminder ? getCategory(reminder) : null
+    const defaultColor = reminder ? getReminderColor(reminder, category) : color
+    
     setEditingItem({ reminderId, completedAt })
     setEditingDate(completedDate.toISOString().split('T')[0])
     setEditingTime(format(completedDate, 'HH:mm'))
+    setColorPostit(defaultColor)
   }
+
+  const renderEditForm = () => (
+    <div className="space-y-2">
+      <input
+        type="date"
+        value={editingDate}
+        onChange={(e) => setEditingDate(e.target.value)}
+        className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+      />
+      <input
+        type="time"
+        value={editingTime}
+        onChange={(e) => setEditingTime(e.target.value)}
+        className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+      />
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-2">
+          Color
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {availableColors.map((col) => (
+            <button
+              key={col}
+              type="button"
+              onClick={() => setColorPostit(col)}
+              className={`w-8 h-8 rounded-lg border-2 transition-all duration-200 hover:scale-110 ${
+                colorPostit === col ? 'border-gray-800 scale-110 shadow-lg ring-2 ring-offset-2' : 'border-gray-200'
+              }`}
+              style={{ 
+                backgroundColor: col,
+                ...(colorPostit === col && { ringColor: col + '40' })
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <button
+          onClick={saveEdit}
+          className="flex-1 px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
+        >
+          {t.common.save}
+        </button>
+        <button
+          onClick={cancelEdit}
+          className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+        >
+          {t.common.cancel}
+        </button>
+      </div>
+    </div>
+  )
 
   const saveEdit = async () => {
     if (!editingItem) return
@@ -199,10 +276,9 @@ export default function WeeklyCompletedView({
     }
 
     const [hours, minutes] = editingTime.split(':').map(Number)
-    const newDate = new Date(editingDate)
-    newDate.setHours(hours, minutes, 0, 0)
+    const [year, month, day] = editingDate.split('-').map(Number)
+    const newDate = new Date(year, month - 1, day, hours, minutes, 0, 0)
     const newCompletedAt = newDate.toISOString()
-
     const newHistory = currentHistory.map(entry => 
       entry === editingItem.completedAt ? newCompletedAt : entry
     ).sort()
@@ -214,6 +290,7 @@ export default function WeeklyCompletedView({
         credentials: 'include',
         body: JSON.stringify({
           completionHistory: newHistory,
+          ...(colorPostit && { colorPostit }),
           timesCompleted: newHistory.length,
           completedAt: newHistory.length > 0 ? newHistory[newHistory.length - 1] : null,
         }),
@@ -350,41 +427,13 @@ export default function WeeklyCompletedView({
                   return (
                     <div
                       key={`${item.reminder.id}-${item.completedAt}-${itemIndex}`}
-                      className="bg-blue-50 rounded-lg border-l-4 p-2 shadow-sm hover:shadow-md transition-shadow relative group"
+                      className="rounded-lg border-l-4 p-2 shadow-sm hover:shadow-md transition-shadow relative group"
                       style={{
-                        borderLeftColor: category?.color || '#3b82f6'
+                        borderLeftColor: getReminderColor(item.reminder, category),
+                        backgroundColor: getReminderBgColor(item.reminder, category)
                       }}
                     >
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <input
-                            type="date"
-                            value={editingDate}
-                            onChange={(e) => setEditingDate(e.target.value)}
-                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                          />
-                          <input
-                            type="time"
-                            value={editingTime}
-                            onChange={(e) => setEditingTime(e.target.value)}
-                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                          />
-                          <div className="flex gap-1">
-                            <button
-                              onClick={saveEdit}
-                              className="flex-1 px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
-                            >
-                              {t.common.save}
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                            >
-                              {t.common.cancel}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
+                      {isEditing ? renderEditForm() : (
                         <>
                           <div className="font-semibold text-sm text-gray-900 mb-1">
                             {item.reminder.title}
@@ -405,7 +454,7 @@ export default function WeeklyCompletedView({
                           )}
                           <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => startEditing(item.reminder.id, item.completedAt)}
+                              onClick={() => startEditing(item.reminder.id, item.completedAt, getReminderColor(item.reminder, category))}
                               className="flex-1 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
                               title={t.reminderCard.editCompletion}
                             >
@@ -497,41 +546,13 @@ export default function WeeklyCompletedView({
                       return (
                         <div
                           key={`${item.reminder.id}-${item.completedAt}-${itemIndex}`}
-                          className="bg-blue-50 rounded-lg border-l-4 p-2 shadow-sm relative group"
+                          className="rounded-lg border-l-4 p-2 shadow-sm relative group"
                           style={{
-                            borderLeftColor: category?.color || '#3b82f6'
+                            borderLeftColor: getReminderColor(item.reminder, category),
+                            backgroundColor: getReminderBgColor(item.reminder, category)
                           }}
                         >
-                          {isEditing ? (
-                            <div className="space-y-2">
-                              <input
-                                type="date"
-                                value={editingDate}
-                                onChange={(e) => setEditingDate(e.target.value)}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                              />
-                              <input
-                                type="time"
-                                value={editingTime}
-                                onChange={(e) => setEditingTime(e.target.value)}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                              />
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={saveEdit}
-                                  className="flex-1 px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
-                                >
-                                  {t.common.save}
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                                >
-                                  {t.common.cancel}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
+                          {isEditing ? renderEditForm() : (
                             <>
                               <div className="font-semibold text-xs text-gray-900 mb-1">
                                 {item.reminder.title}
@@ -552,7 +573,7 @@ export default function WeeklyCompletedView({
                               )}
                               <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
-                                  onClick={() => startEditing(item.reminder.id, item.completedAt)}
+                                  onClick={() => startEditing(item.reminder.id, item.completedAt, getReminderColor(item.reminder, category))}
                                   className="flex-1 px-1.5 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
                                   title={t.reminderCard.editCompletion}
                                 >
@@ -642,41 +663,13 @@ export default function WeeklyCompletedView({
                       return (
                         <div
                           key={`${item.reminder.id}-${item.completedAt}-${itemIndex}`}
-                          className="bg-blue-50 rounded-lg border-l-4 p-2 shadow-sm relative group"
+                          className="rounded-lg border-l-4 p-2 shadow-sm relative group"
                           style={{
-                            borderLeftColor: category?.color || '#3b82f6'
+                            borderLeftColor: getReminderColor(item.reminder, category),
+                            backgroundColor: getReminderBgColor(item.reminder, category)
                           }}
                         >
-                          {isEditing ? (
-                            <div className="space-y-2">
-                              <input
-                                type="date"
-                                value={editingDate}
-                                onChange={(e) => setEditingDate(e.target.value)}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                              />
-                              <input
-                                type="time"
-                                value={editingTime}
-                                onChange={(e) => setEditingTime(e.target.value)}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                              />
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={saveEdit}
-                                  className="flex-1 px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
-                                >
-                                  {t.common.save}
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                                >
-                                  {t.common.cancel}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
+                          {isEditing ? renderEditForm() : (
                             <>
                               <div className="font-semibold text-xs text-gray-900 mb-1">
                                 {item.reminder.title}
@@ -697,7 +690,7 @@ export default function WeeklyCompletedView({
                               )}
                               <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
-                                  onClick={() => startEditing(item.reminder.id, item.completedAt)}
+                                  onClick={() => startEditing(item.reminder.id, item.completedAt, getReminderColor(item.reminder, category))}
                                   className="flex-1 px-1.5 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
                                   title={t.reminderCard.editCompletion}
                                 >
@@ -787,41 +780,13 @@ export default function WeeklyCompletedView({
                       return (
                         <div
                           key={`${item.reminder.id}-${item.completedAt}-${itemIndex}`}
-                          className="bg-blue-50 rounded-lg border-l-4 p-2 shadow-sm relative group"
+                          className="rounded-lg border-l-4 p-2 shadow-sm relative group"
                           style={{
-                            borderLeftColor: category?.color || '#3b82f6'
+                            borderLeftColor: getReminderColor(item.reminder, category),
+                            backgroundColor: getReminderBgColor(item.reminder, category)
                           }}
                         >
-                          {isEditing ? (
-                            <div className="space-y-2">
-                              <input
-                                type="date"
-                                value={editingDate}
-                                onChange={(e) => setEditingDate(e.target.value)}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                              />
-                              <input
-                                type="time"
-                                value={editingTime}
-                                onChange={(e) => setEditingTime(e.target.value)}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-                              />
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={saveEdit}
-                                  className="flex-1 px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
-                                >
-                                  {t.common.save}
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                                >
-                                  {t.common.cancel}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
+                          {isEditing ? renderEditForm() : (
                             <>
                               <div className="font-semibold text-xs text-gray-900 mb-1">
                                 {item.reminder.title}
@@ -842,7 +807,7 @@ export default function WeeklyCompletedView({
                               )}
                               <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
-                                  onClick={() => startEditing(item.reminder.id, item.completedAt)}
+                                  onClick={() => startEditing(item.reminder.id, item.completedAt, getReminderColor(item.reminder, category))}
                                   className="flex-1 px-1.5 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center justify-center gap-1"
                                   title={t.reminderCard.editCompletion}
                                 >

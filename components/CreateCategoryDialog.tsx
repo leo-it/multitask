@@ -2,24 +2,16 @@
 
 import { useState } from 'react'
 import { useI18n } from '@/hooks/useI18n'
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/lib/constants'
 
 interface CreateCategoryDialogProps {
   onClose: () => void
   onSuccess: () => void
 }
 
-const colors = [
-  '#3b82f6',
-  '#ef4444',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#f97316',
-]
+const colors = CATEGORY_COLORS
 
-const icons = ['💳', '🏋️', '🏠', '🚗', '📱', '💊', '🎓', '🍔', '✈️', '🎁']
+const icons = CATEGORY_ICONS
 
 export default function CreateCategoryDialog({ onClose, onSuccess }: CreateCategoryDialogProps) {
   const t = useI18n('es')

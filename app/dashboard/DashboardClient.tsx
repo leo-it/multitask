@@ -40,6 +40,12 @@ export default function DashboardClient() {
     }
   }
 
+  const onWeekChange = (date: Date) => {
+    if(date) {
+      setWeeklyViewDate(date)
+    }
+  }
+
   const addCompletedReminders = async (reminders: Reminder[]) => {
     if (!selectedDate) {
       console.error('No hay fecha seleccionada')
@@ -284,6 +290,7 @@ export default function DashboardClient() {
             categories={categories}
             selectedDate={weeklyViewDate}
             onDateChange={onDateChange}
+            onWeekChange={onWeekChange}
             onUpdate={loadData}
           />
         ) : (
