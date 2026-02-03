@@ -9,7 +9,6 @@ import CreateCategoryDialog from '@/components/CreateCategoryDialog'
 import EditReminderDialog from '@/components/EditReminderDialog'
 import EditCategoryDialog from '@/components/EditCategoryDialog'
 import WeeklyCompletedView from '@/components/WeeklyCompletedView'
-import LoadingSpinner from '@/components/LoadingSpinner'
 import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 import Modal from '@/components/Modal'
@@ -32,6 +31,7 @@ export default function DashboardClient() {
   const [weeklyViewDate, setWeeklyViewDate] = useState(new Date())
   const [showCustom, setShowCustom] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [modalCategoryFilter, setModalCategoryFilter] = useState<string | null>(null)
 
   const onDateChange = (date: Date) => {
     if(date) {
@@ -225,13 +225,7 @@ export default function DashboardClient() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <div className="text-center">
-          <LoadingSpinner size="lg" text={t.dashboard.loadingTasks} />
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (
@@ -492,13 +486,14 @@ export default function DashboardClient() {
   onClose={() => {
     setShowCustom(false)
     setReminders(reminders.map(r => ({ ...r, completed: false })))
+    setModalCategoryFilter(null)
   }}
   header={
     <div className="flex items-center gap-2">
       <h2> {selectedDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
       <select
-            value={categoryFilter || 'todas'}
-            onChange={(e) => setCategoryFilter(e.target.value === 'todas' ? null : e.target.value)}
+            value={modalCategoryFilter || 'todas'}
+            onChange={(e) => setModalCategoryFilter(e.target.value === 'todas' ? null : e.target.value)}
             className="px-4 py-2.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none shadow-sm hover:shadow transition-all duration-200 text-sm font-medium text-gray-700"
           >
             <option value="todas">{t.dashboard.allCategories}</option>
@@ -541,7 +536,9 @@ export default function DashboardClient() {
     {reminders.length === 0 ? (
       <p className="text-gray-500 text-center py-4">No hay recordatorios disponibles</p>
     ) : (
-      filteredReminders.map((reminder) => {
+      reminders
+        .filter((r) => !modalCategoryFilter || r.categoryId === modalCategoryFilter)
+        .map((reminder) => {
         let currentHistory: string[] = []
         if (reminder.completionHistory) {
           if (typeof reminder.completionHistory === 'string') {
