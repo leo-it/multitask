@@ -13,6 +13,7 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 import Modal from '@/components/Modal'
+import { useApiFetch } from '@/lib/fetch'
 
 export default function DashboardClient() {
   const router = useRouter()
@@ -150,11 +151,13 @@ export default function DashboardClient() {
     }
   }, [router])
 
+  const { fetch: fetchWithLoading } = useApiFetch()
+
   const loadData = async () => {
     try {
       const [remindersRes, categoriesRes] = await Promise.all([
-        fetch('/api/recordatorios', { credentials: 'include' }),
-        fetch('/api/categorias', { credentials: 'include' }),
+        fetchWithLoading('/api/recordatorios'),
+        fetchWithLoading('/api/categorias'),
       ])
 
       if (!remindersRes.ok) {
@@ -211,9 +214,8 @@ export default function DashboardClient() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/firebase/logout', {
+      await fetchWithLoading('/api/auth/firebase/logout', {
         method: 'POST',
-        credentials: 'include',
       })
       router.push('/login')
       router.refresh()
