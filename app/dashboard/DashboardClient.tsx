@@ -495,12 +495,23 @@ export default function DashboardClient() {
   }}
   header={
     <div className="flex items-center gap-2">
-      <span>📅</span>
-      <h2>Día seleccionado: {selectedDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
+      <h2> {selectedDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
+      <select
+            value={categoryFilter || 'todas'}
+            onChange={(e) => setCategoryFilter(e.target.value === 'todas' ? null : e.target.value)}
+            className="px-4 py-2.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none shadow-sm hover:shadow transition-all duration-200 text-sm font-medium text-gray-700"
+          >
+            <option value="todas">{t.dashboard.allCategories}</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
     </div>
   }
   footer={
-    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>     
       <button 
         type="button"
         onClick={(e) => {
@@ -526,11 +537,11 @@ export default function DashboardClient() {
   }
   maxWidth="lg"
 >
-  <div className="space-y-3">
+  <div className="space-y-3 lg:h-[200px] h-[150px] overflow-y-auto overflow-x-auto">
     {reminders.length === 0 ? (
       <p className="text-gray-500 text-center py-4">No hay recordatorios disponibles</p>
     ) : (
-      reminders.map((reminder) => {
+      filteredReminders.map((reminder) => {
         let currentHistory: string[] = []
         if (reminder.completionHistory) {
           if (typeof reminder.completionHistory === 'string') {
