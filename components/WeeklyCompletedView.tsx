@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale'
 import { Reminder, Category } from '@/types'
 import { useI18n } from '@/hooks/useI18n'
 import { CATEGORY_COLORS } from '@/lib/constants'
+import ConfirmDialog from './ConfirmDialog'
 
 interface WeeklyCompletedViewProps {
   reminders: Reminder[]
@@ -35,6 +36,8 @@ export default function WeeklyCompletedView({
   const [editingDate, setEditingDate] = useState('')
   const [editingTime, setEditingTime] = useState('')
   const [colorPostit, setColorPostit] = useState('')
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ reminderId: string; completedAt: string } | null>(null)
 
   const availableColors = CATEGORY_COLORS
 
@@ -139,10 +142,15 @@ export default function WeeklyCompletedView({
     return inicioSemana.getTime() === inicioSemanaHoy.getTime()
   }
 
-  const deleteCompletionEntry = async (reminderId: string, completedAt: string) => {
-    if (!confirm(t.reminderCard.deleteCompletionConfirm)) return
+  const handleDeleteClick = (reminderId: string, completedAt: string) => {
+    setPendingDelete({ reminderId, completedAt })
+    setIsConfirmOpen(true)
+  }
 
-    const reminder = reminders.find(r => r.id === reminderId)
+  const confirmDelete = async () => {
+    if (!pendingDelete) return
+
+    const reminder = reminders.find(r => r.id === pendingDelete.reminderId)
     if (!reminder) return
 
     let currentHistory: string[] = []
@@ -158,10 +166,10 @@ export default function WeeklyCompletedView({
       }
     }
 
-    const newHistory = currentHistory.filter(entry => entry !== completedAt)
+    const newHistory = currentHistory.filter(entry => entry !== pendingDelete.completedAt)
 
     try {
-      const response = await fetch(`/api/recordatorios/${reminderId}`, {
+      const response = await fetch(`/api/recordatorios/${pendingDelete.reminderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -176,6 +184,8 @@ export default function WeeklyCompletedView({
         onUpdate?.()
       }
     } catch (error) {
+    } finally {
+      setPendingDelete(null)
     }
   }
 
@@ -464,7 +474,7 @@ export default function WeeklyCompletedView({
                               {t.common.edit}
                             </button>
                             <button
-                              onClick={() => deleteCompletionEntry(item.reminder.id, item.completedAt)}
+                              onClick={() => handleDeleteClick(item.reminder.id, item.completedAt)}
                               className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center"
                               title={t.reminderCard.deleteCompletion}
                             >
@@ -582,7 +592,7 @@ export default function WeeklyCompletedView({
                                   </svg>
                                 </button>
                                 <button
-                                  onClick={() => deleteCompletionEntry(item.reminder.id, item.completedAt)}
+                                  onClick={() => handleDeleteClick(item.reminder.id, item.completedAt)}
                                   className="px-1.5 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center"
                                   title={t.reminderCard.deleteCompletion}
                                 >
@@ -699,7 +709,7 @@ export default function WeeklyCompletedView({
                                   </svg>
                                 </button>
                                 <button
-                                  onClick={() => deleteCompletionEntry(item.reminder.id, item.completedAt)}
+                                  onClick={() => handleDeleteClick(item.reminder.id, item.completedAt)}
                                   className="px-1.5 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center"
                                   title={t.reminderCard.deleteCompletion}
                                 >
@@ -816,7 +826,7 @@ export default function WeeklyCompletedView({
                                   </svg>
                                 </button>
                                 <button
-                                  onClick={() => deleteCompletionEntry(item.reminder.id, item.completedAt)}
+                                  onClick={() => handleDeleteClick(item.reminder.id, item.completedAt)}
                                   className="px-1.5 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center"
                                   title={t.reminderCard.deleteCompletion}
                                 >
@@ -837,6 +847,19 @@ export default function WeeklyCompletedView({
           })}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => {
+          setIsConfirmOpen(false)
+          setPendingDelete(null)
+        }}
+        onConfirm={confirmDelete}
+        message={t.reminderCard.deleteCompletionConfirm}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmButtonClassName="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+      />
     </div>
   )
 }
